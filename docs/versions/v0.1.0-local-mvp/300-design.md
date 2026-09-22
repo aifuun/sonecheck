@@ -109,14 +109,22 @@
 
 ## 5. 关键决策（ADR）
 
-| 决策 | 备选方案 | 选择理由 | 影响 |
-|---|---|---|---|
-| 扩展迁移 TypeScript，布局 `src/` → `out/` | 保持 JS；`src/` → `dist/` | 与 `01` §1 选型一致；`src` + `out` 是 VS Code 官方模板惯例，后续查文档与抄示例零摩擦 | `main` 改为 `./out/extension.js`；`.vscodeignore` 排除 `src/` |
-| 判定服务先用 mock 实现，与真实客户端**同签名** | 等 endpoint 确认再开工 | `05` §4 的既定风险预案；接口层隔离后，`v0.1.1` 只替换 `infra/jevClient` 实现 | `infra/jevClient` 的公开签名即为契约，`v0.1.1` 不得变更 |
-| 上下文截取用轻量作用域识别 + 固定窗口兜底 | 纯固定窗口；引入 AST 解析器 | 更贴合评审需求，实现成本显著低于 AST | `contextBuilder` 须处理括号不平衡等边界 |
-| `reason_code` 本版只兑现 5 项 | 全部 7 项；只返回 `UNKNOWN` | `CONFIG_CHANGE` / `HIGH_FANOUT` 需配置解析与引用计数能力，本版不具备；返回 `UNKNOWN` 会让清单缺少可读原因 | `03` §2.4 的枚举表须标注哪几项在 `v0.1.0` 生效 |
+| 决策 | ADR | 备选方案 | 选择理由 | 影响 |
+|---|---|---|---|---|
+| 扩展迁移 TypeScript，布局 `src/` → `out/` | [ADR-001](../../adrs/adr-001.md) | 保持 JS；`src/` → `dist/` | 与 `01` §1 选型一致；`src` + `out` 是 VS Code 官方模板惯例，后续查文档与抄示例零摩擦 | `main` 改为 `./out/extension.js`；`.vscodeignore` 排除 `src/` |
+| 判定服务先用 mock 实现，与真实客户端**同签名** | [ADR-002](../../adrs/adr-002.md) | 等 endpoint 确认再开工 | `05` §4 的既定风险预案；接口层隔离后，`v0.1.1` 只替换 `infra/jevClient` 实现 | `infra/jevClient` 的公开签名即为契约，`v0.1.1` 不得变更 |
+| 上下文截取用轻量作用域识别 + 固定窗口兜底 | —（算法选型，不涉及技术栈，不单独落 ADR） | 纯固定窗口；引入 AST 解析器 | 更贴合评审需求，实现成本显著低于 AST | `contextBuilder` 须处理括号不平衡等边界 |
+| `reason_code` 本版只兑现 5 项 | —（范围决策，同上） | 全部 7 项；只返回 `UNKNOWN` | `CONFIG_CHANGE` / `HIGH_FANOUT` 需配置解析与引用计数能力，本版不具备；返回 `UNKNOWN` 会让清单缺少可读原因 | `03` §2.4 的枚举表须标注哪几项在 `v0.1.0` 生效 |
 
-> 技术选型类决策（TS 迁移、mock 判定器）须触发 `dm-adr` 落盘——在契约与决策记录阶段由 `dm-adr` 产出 ADR 并回填编号至此表。
+**本版技术栈决策（`dm-adr` 已落盘）**
+
+| 决策 | ADR |
+|---|---|
+| 测试框架选型：Vitest + MSW | [ADR-003](../../adrs/adr-003.md) |
+| Jev 客户端手写 `fetch`，不引入官方 SDK | [ADR-004](../../adrs/adr-004.md) |
+| 风险分采用 `noul` 原语，不使用 `score` 原语 | [ADR-005](../../adrs/adr-005.md) |
+
+> 技术选型类决策须触发 `dm-adr` 落盘（由 S1 完成）；已落盘项在上表回填编号。**ADR 原文为唯一权威**，本表只登记指向与版本级取舍。
 
 ---
 

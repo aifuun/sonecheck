@@ -14,8 +14,8 @@
 | 框架 | VS Code Extension API（无 Webview 框架） | VS Code 稳定版 | 原生 QuickPick / 状态栏足以覆盖 v0.1.0 交互，避免 Webview 调试开销 |
 | 存储 | VS Code `SecretStorage`（Key）+ `workspace.getConfiguration`（阈值、开关） | — | Key 不落盘明文；配置跟随用户设置同步 |
 | 第三方服务 | Jev Decision API（TypeSafe AI） | `POST https://api.typesafe.ai/v1/systemone`；`model: "jev-latest"`（官方文档 `https://docs.typesafe.ai/api`） | System-1 结构化判定（`noul` / `choice` / `score` 三原语），输出免费、延迟量级为亚秒级；是本产品的成本与速度前提，实际延迟须经 M1 实测回填。契约见 `03` §2.1 |
-| 构建 / 打包 | `@vscode/vsce` → `.vsix` | <!-- TODO --> | 官方打包链，支持 GitHub Release 与 Marketplace 双通道 |
-| 测试框架 | <!-- TODO: [dm-init-docs] vitest / mocha + @vscode/test-electron --> | <!-- TODO --> | 需同时覆盖纯逻辑单测与扩展宿主集成测试 |
+| 构建 / 打包 | `@vscode/vsce` → `.vsix` | `^4.0` | 官方打包链，支持 GitHub Release 与 Marketplace 双通道 |
+| 测试框架 | Vitest（T1 / T2）+ MSW（T2 网络层拦截）；T3 走真机人工 | `vitest ^5.0` / `msw ^2.15` | 纯 Node 场景零配置跑 TS；T2 必须在 HTTP 层拦截才能真实验证退避与超时。决策见 [`docs/adrs/adr-003.md`](adrs/adr-003.md) |
 
 > 架构级技术选型须经 `dm-adr` 记录决策（ADR），本文只登记结论与指向。
 
@@ -39,8 +39,8 @@
 
 | 测试层 | 覆盖范围 | 运行方式 | 门禁要求 |
 |--------|----------|----------|----------|
-| 单元 / 断言（T1） | diff 切块、上下文组装、阈值过滤、Top-K 排序、错误码映射 | <!-- TODO: 命令，如 npm run test:unit --> | 全绿方可交付 |
-| 契约 / 集成（T2） | Jev 请求 / 响应 schema、降级路径、SecretStorage 读写 | <!-- TODO: 命令，如 npm run test:integration（含 mock server） --> | 全绿方可交付 |
+| 单元 / 断言（T1） | diff 切块、上下文组装、阈值过滤、Top-K 排序、错误码映射 | `npm run test:unit`（Vitest） | 全绿方可交付 |
+| 契约 / 集成（T2） | Jev 请求 / 响应 schema、降级路径、SecretStorage 读写 | `npm run test:integration`（Vitest + MSW 拦截 HTTP 层） | 全绿方可交付 |
 | 端到端 / 真机（T3） | 「触发命令 → 清单弹出 → 点击跳转」完整链路；断网降级 | 手动安装 `.vsix` 真机验证 | 核心路径零走查 |
 
 > ⚠️ **编号约定**：`L1 / L2 / L3` 专属于**契约层级**（接口 / Feature / 行为，见 `dev-meta/docs/06`）。
@@ -75,6 +75,7 @@
 |----------|------|------|
 | `00_PRODUCT_REQUIREMENTS.md` | upstream | 业务意图来源 |
 | `dev-meta/docs/06-contract-based-dev.md` §10 | 外部权威 | 测试职责分层（只引用） |
+| `docs/adrs/` | 关联 | 技术选型决策记录（本文 §1 引用 ADR-003 / ADR-004） |
 | `02_SYSTEM_DESIGN.md` | downstream | 架构落地 |
 | `03_CONTRACTS_AND_API.md` | downstream | 契约定义 |
 | `06_OBSERVABILITY.md` | downstream | 可观测性实例化 |
