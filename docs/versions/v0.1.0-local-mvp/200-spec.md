@@ -14,16 +14,16 @@
 | 维度 | 本版本触及 | 硬约束 / 红线 |
 |---|---|---|
 | 分层 | 三层全部落地：`src/ui` / `src/core` / `src/infra`，新增 `src/extension.ts` 作为装配入口 | 严格单向 `UI → Core → Infra`；下层不得反向 import 上层；跨层只经 Facade |
-| 模块 | 新建 `infra/`（`git`、`diffParser`、`jevClient`、`configSource`）与 `core/`（`riskEngine`、`threshold`、`config`、`contextBuilder`）与 `ui/`（`commands`、`riskList`、`status`）；`infra/secrets` 与 `infra/logger` 留待 `v0.1.1` | 每模块仅经 Facade 暴露；`core` 不得引用 `vscode` 做 IO——配置读取一律归 `infra/configSource` |
+| 模块 | 新建跨层常量 `src/constants.ts`（判定阈值、payload 上限、构建期日志开关的唯一集中处）与 `infra/`（`git`、`diffParser`、`jevClient`、`configSource`）与 `core/`（`riskEngine`、`threshold`、`config`、`contextBuilder`）与 `ui/`（`commands`、`riskList`、`status`）；`infra/secrets` 与 `infra/logger` 留待 `v0.1.1` | 每模块仅经 Facade 暴露；`core` 不得引用 `vscode` 做 IO——配置读取一律归 `infra/configSource`；判定阈值 / payload 上限等字面量一律取自 `constants.ts`（`INV-07`） |
 | 门面 | `src/core/index.ts`、`src/infra/index.ts` 两个 Facade 入口 | 层间调用只经 Facade，内部实现全部私有 |
-| 契约 | `INV-01` / `INV-02` / `INV-05` / `INV-06` / `INV-07` → `[CURRENT]`；`API-01`（mock 实现）与 `API-02` → `[CURRENT]`；`CFG-01` 部分兑现（`riskThreshold` / `maxItems` / `enabled` / `sensitivePathPatterns`）；`ERR-06` / `ERR-07` / `ERR-09` 落地。**是否阻塞编码：否**（本版不改契约语义，只推进状态） | 契约 ID 与 `03_CONTRACTS_AND_API.md` 完全一致；不新增未登记的命令或配置项 |
+| 契约 | `INV-01` / `INV-02` / `INV-05` / `INV-06` / `INV-07` → `[CURRENT]`；`API-01`（mock 实现，**只兑现签名与本地派生字段**，失败面 `ERR-01`~`ERR-05` 归 `v0.1.1`）与 `API-02` → `[CURRENT]`；`CFG-01` 部分兑现（`riskThreshold` / `maxItems` / `enabled` / `sensitivePathPatterns`）；`ERR-06` / `ERR-07` / `ERR-09` 落地。**是否阻塞编码：否**（本版不改契约语义，只推进状态） | 契约 ID 与 `03_CONTRACTS_AND_API.md` 完全一致；翻牌集合与 `05` §2.1 交付成果 #13 一致；不新增未登记的命令或配置项 |
 | API | 新增 VS Code 命令 `sonecheck.inspectDiff`（`API-02`）；`API-01` Response 的 `reason_code` 只兑现 5 项枚举 | 命令 ID 与契约逐字一致；`sonecheck.showStatus` 占位命令移除 |
 
 ### 1.1 明确不做（技术 / 范围）
 
 | 项 | 类型 | 理由 / 归属 |
 |---|---|---|
-| 真实 HTTP 客户端（超时 / 重试 / 鉴权） | 范围 | `v0.1.1`——接入参数（endpoint / 鉴权方式）尚未确认 |
+| 真实 HTTP 客户端（超时 / 重试 / 鉴权） | 范围 | `v0.1.1`——本版按 ADR-002 用与真实客户端**同签名**的本地 mock 跑通链路（不发网络、不涉及 API Key） |
 | 降级路径（网络失败 / 超时 / 配额 / schema 不合规） | 范围 | `v0.1.1`——mock 判定器是本地纯函数，不产生网络失败 |
 | 运行期结构化日志（`observe` / `inspectionId` / 7 个埋点） | 范围 | `v0.1.1` |
 | `API-03 sonecheck.setApiKey` 命令 | 范围 | `v0.1.1`——本版无真实 Key 需求 |
@@ -48,7 +48,7 @@
 | 高风险清单 | 暂存区含敏感路径改动 | 弹出 QuickPick，条目格式 `[score] 文件:行 · reason` |
 | 零打扰 | 全部为低风险改动 | 状态栏短暂提示后恢复，不弹清单（US-03） |
 | 跳转定位 | 点击清单条目 | 打开对应文件且光标落在 hunk 起始行，无死链 |
-| 端到端耗时 | 真机一次 ≥10 块改动 | 端到端 `p95 ≤ 1s`（**阈值由 S3 实测后定案**） |
+| 端到端耗时 | 真机多轮（每轮 ≥10 块改动） | 端到端 `p95 ≤ 1s`（`00` §3 的**自设验收线**；S3 实测回填的是 `riskThreshold` / 上下文窗口 / payload 上限，不改变本验收线） |
 | 工作区只读 | 检查前后对比 `git status` | 工作区无任何变化 |
 
 ---

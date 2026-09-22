@@ -22,6 +22,7 @@
 | 层 | 文件 | 职责 | 禁止 |
 |---|---|---|---|
 | 装配 | `src/extension.ts` | `activate()` 注册命令与组装依赖、`deactivate()` 清理 | 承载业务逻辑 |
+| 跨层常量 | `src/constants.ts` | 命名常量唯一集中处（判定阈值、payload 上限、构建期日志开关） | 纯数据模块：不属于任何层、不 import 任何层，三层只读引用；不得写逻辑 / IO |
 | UI | `src/ui/commands.ts` | 命令编排：读配置 → 调 core → 分发结果 | 直接调 git / HTTP |
 | UI | `src/ui/riskList.ts` | QuickPick 清单与跳转定位 | 计算风险分 |
 | UI | `src/ui/status.ts` | 状态栏双态与一次性提示 | 直连 core 内部 |
@@ -35,12 +36,13 @@
 | Infra | `src/infra/jevClient.ts` | 判定请求（本版为本地 mock 实现） | 依赖 `vscode` |
 
 - **Facade**：`src/core/index.ts`、`src/infra/index.ts` 各只 re-export 公开符号，内部实现全部私有。
+- **本版不建的模块**：`src/infra/secrets.ts` / `src/infra/logger.ts` 按 `200-spec` §1.1 归 `v0.1.1`（本版无 API Key、无运行期日志）；`src/constants.ts` 虽为跨层模块，但由 S0 随工程骨架一并建立。
 
 ### 2.1 防腐设计
 
 | 关注点 | 设计约束 |
 |---|---|
-| 类型边界 | 层间只交换项目自有类型（`Hunk` / `RiskItem` / `DecisionResult` / `SoneCheckConfig`）；`vscode` 类型**只允许**出现在 `src/ui/**` 与 `src/infra/configSource.ts` |
+| 类型边界 | 层间只交换项目自有类型（`Hunk` / `RiskItem` / `DecisionResult` / `SoneCheckConfig`）；`vscode` 类型**只允许**出现在 `src/ui/**`、`src/extension.ts`（装配入口，须接收 `ExtensionContext`）与 `src/infra/configSource.ts`（唯一配置出口） |
 | 错误域边界 | 本地失败只落 `ERR-06`（非 git 仓库）/ `ERR-07`（无暂存改动）/ `ERR-09`（git 缺失）；`core` 不做 `try-catch`，异常沿调用链上抛至 `ui/commands` 统一提示一次后终止；**不静默吞错** |
 | 模块物理路径 | `src/{ui,core,infra}` → tsc 编译 → `out/{ui,core,infra}`；入口 `src/extension.ts` → `out/extension.js` |
 | 工程登记 | `package.json` 的 `main` 改为 `./out/extension.js`；`.vscodeignore` 排除 `src/`、`test/`、`tsconfig.json`、`**/*.map` |
@@ -88,7 +90,7 @@
 
 - **方案**：对 hunk 起始行做**括号配对回溯**——自改动行向上扫描，找到第一个使括号深度归零的 `{`，即为所在作用域起点；再向下扫描至深度归零，取该区间行文本作为 `context_code`。
 - **兜底**：无法定位时（非 C 系语法、单行文件、括号不平衡），退化为「hunk 前后各 10 行」的固定窗口。
-- **硬上限**：结果按 **2048 字节**截断（`INV-02`），截断时从尾部长截以保留改动行所在片段。
+- **硬上限**：受 `INV-02` 的「**payload 序列化总长 ≤ 2048 字节**」约束——上下文截断预算 = `MAX_PAYLOAD_BYTES` − 序列化后其余字段（`file_path` / `change_type` / `diff_hunk`）的字节数；截断时从尾部长截以保留改动行所在片段。
 - **选型理由**：比固定窗口更贴合「评审者需要看整个函数」的实际需求，而实现成本显著低于引入 AST 解析器。
 
 ### 4.2 多维加权判定（mock 判定器）
@@ -103,7 +105,8 @@
 - **合成分**：`score = Σ(维度值 × 权重)`，截断到 `[0, 1]`。
 - **判定**：`score ≥ riskThreshold` → `decision = AUDIT`，否则 `PASS`。
 - **`reason_code`**：取**权重最高的命中维度**对应的枚举。本版落地 `AUTH_BOUNDARY` / `DATA_WRITE` / `CONTRACT_BREAK` / `ERROR_HANDLING` / `STYLE_ONLY` 五项；未命中任何维度时返回 `STYLE_ONLY`。
-- **选型理由**：权重可调、维度可解释，四个维度的原始值都能在 Harness 中统计分布，满足规范 §6.3「实测后定案」的要求。
+- **选型理由**：权重可调、维度可解释，四个维度的原始值都能在 Harness 中统计分布，满足 `dev-meta/docs/02-version-rules.md` §6.3「数据驱动阈值（强制）」的要求。
+- **实现归属**：`scoreHunk(input): DecisionResult` 属 `infra/jevClient` 的**内部实现**（与 `decide()` 同文件），不单独成模块；`v0.1.1` 换真实客户端时只替换该文件实现，签名与 `DecisionResult` 字段不变（ADR-002）。
 - **与 Jev 真实原语的对应**：本版 mock 的「多维加权合成」即官方推荐的 **composite scoring** 模式——真实接入时每个维度改为一个独立的 `noul` question（同一 `state`、单次调用内并行评估），权重仍在本地代码组合。因此 `scoreHunk` 的签名与权重结构在 `v0.1.1` **不变**，只替换 `infra/jevClient` 的实现（`03` §2.1）。
 
 ---
