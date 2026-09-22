@@ -121,4 +121,4 @@
 | `06_OBSERVABILITY.md` | 关联 | 错误 / 降级留痕落点 |
 | `dev-meta/docs/09-ai-architecture-guide.md` §7 | upstream | 设计令牌规范与准入线（只引用） |
 
-> 方向取值：`upstream` / `外部权威` / `关联`（同 `01` §5）。
+> 方向取值：`upstream`（本文引用它）/ `外部权威`（只引用不重定义）/ `关联`（无层级关系的互补文档）。

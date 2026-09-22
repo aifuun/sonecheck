@@ -12,8 +12,8 @@
 | 阶段 | 目标 | 范围 | 完成判据 | 对应版本 | 状态 |
 |------|------|------|----------|----------|------|
 | M0 名称阵地 | 抢占免费标识，避免后期改名 | npm `sonecheck` 占位包（见 `01` §4）；GitHub 仓库 `rolligen/sonecheck`（已 Public）；Marketplace `rolligen.sonecheck` 占位 | 三平台均可查到占位产物 | —（已由占位包与仓库迁移完成） | ✅ |
-| M1 本地 MVP | 单机跑通「抓 diff → 判定 → 跳转」 | `02` §3 主链路（步骤 1–12），判定服务先用 mock，无 UI 美化 | 真机一次 ≥10 块改动内出清单并成功跳转 | `v0.1.0` | ⬜ |
-| M2 可分发 | 让外部用户能装上 | `.vsix` 打包；Marketplace 发布；README 安装说明 | 干净 VS Code 上 `Install from VSIX` 跑通（US-01–US-04） | 由 `v0.1.0` 收口（S7）覆盖，不单列版本 | ⬜ |
+| M1 本地 MVP | 单机跑通「抓 diff → 判定 → 跳转」（US-01 / US-02 / US-03） | `02` §3 主链路（步骤 1–12），判定服务先用 mock，无 UI 美化 | 真机一次 ≥10 块改动内出清单并成功跳转 | `v0.1.0` | ⬜ |
+| M2 可分发 | 让外部用户能装上（US-04：payload 边界须通过企业安全审查） | `.vsix` 打包；Marketplace 发布；README 安装说明 | 干净 VS Code 上 `Install from VSIX` 跑通 | 由 `v0.1.0` 收口（S7）覆盖，不单列版本 | ⬜ |
 | M3 可信度 | 降低误报，提升判定质量 | 上下文增强、LSP 元数据、阈值可调、误报反馈收集 | 抽样 50 次提交，误报率 ≤ <!-- TODO: [dm-init-docs] 目标值 --> | `v0.2.0`（前置 `v0.1.1`） | ⬜ |
 | M4 团队化 | 支撑收费模式 | 托管 Proxy（免配 Key）、团队规则中心、审计日志（US-05） | 团队规则可下发且留痕 | `v1.0.0` | ⬜ |
 
@@ -44,7 +44,7 @@
 | 1 | `extension/` 迁移 TypeScript：`tsconfig`、tsc 编译链、`main` 指向 `./out/extension.js`、补 npm scripts | `01` §1、§4 |
 | 2 | 三层工程骨架落地：`src/ui` / `src/core` / `src/infra` + Facade 入口（单向分层） | `02` §1 |
 | 3 | 抓取 `git diff --staged`（工作区根、只读）并切分为 hunk 数组（文件、起始行、内容） | `02` §2 `infra/git`、`infra/diffParser` |
-| 4 | mock 判定器实现 `infra/jevClient.decide()`，与真实服务**同签名**，返回 `score` / `decision` / `reason_code` | `03` §2.1 `API-01` |
+| 4 | mock 判定器实现 `infra/jevClient.decide()`，与真实服务**同签名**，返回 `score` / `decision` / `reason_code`（其中 `decision` 由 `decide()` 按阈值**本地派生**，非上游字段） | `03` §2.1 `API-01` |
 | 5 | 阈值过滤 + Top-K 排序（阈值取自配置 + 命名常量，禁硬编码字面量） | `03` §3 `CFG-01`、`INV-07` |
 | 6 | QuickPick 风险清单，条目格式 `[score] 文件:行 · reason` | `04` §1、§3.2 |
 | 7 | 选中条目跳转定位：打开文件 + 光标落到 hunk 起始行（禁止死链） | `INV-06` |
