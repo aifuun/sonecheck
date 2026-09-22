@@ -20,7 +20,7 @@ AI 编程工具（Copilot / Claude Code / Cursor 等）让代码**产出速度**
 
 sonecheck 的切入点是**替换掉审查链路中「生成」这一环**：用 Jev（System-1 决策模型，只输出结构化 `Choice` / `Score` / `Noul` 三类原语，不生成文本）把 diff 切成块并在**亚秒级内**完成打分，只把最值得人看的那 1–3 块推到眼前。
 
-- **一句话定位**：Sub-second System-1 AI code risk inspector for VS Code —— 在提交前把「最值得你亲自看的那几行改动」挑出来。
+- **一句话定位**：Sub-second System-1 AI code risk inspector for VS Code and Git hooks —— 在提交前把「最值得你亲自看的那几行改动」挑出来。
 - **核心价值主张**：与生成式 AI 审查相比，快一个数量级以上（亚秒级 vs 数秒）、零幻觉（只打分不生成代码）、成本极低（输出免费）、低打扰（无风险时完全静默）。
 - **命名规范**：仓库名 / npm 包名 / CLI 命令统一用全小写 `sonecheck`；品牌展示与 VS Code 插件显示名用 `SoneCheck`。
 
@@ -76,6 +76,8 @@ sonecheck 的切入点是**替换掉审查链路中「生成」这一环**：用
 | 服务端 Proxy / 托管 API Key | 避免过早承担运营成本与数据合规责任 |
 | 自动改写代码 | Jev 不生成内容；任何修复动作由用户或后续版本承担 |
 | 多语言 AST / 多模型路由 | 单点价值验证后再扩展 |
+
+> **关于定位中的「and Git hooks」**：指**后续版本**的**非强制**集成——在 `pre-commit` 等钩子中触发检查、结果只提示不阻断；**强制拦截**明确不做（见上表）。`v0.1.0` 仅提供命令面板手动触发。
 
 ---
 
