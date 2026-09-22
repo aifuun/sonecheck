@@ -21,7 +21,7 @@
 |---|-----|------|------|---------|------|---------|---------|------|
 | 1 | v0.1.0-research-01 | research | 调研 | 写明本版要证明的假设（「Top-K 清单能让 review 聚焦」）与判据；在 2 个真实仓库记录人工 review 用的时间基线 | ★★☆☆☆ | 0.5h | 假设、判据、基线记录三者已写明 | ⬜ |
 | 2 | v0.1.0-dev-01 | dev | 开发 | **S0 Scaffold & Clean**：TS 工程化、`src/`→`out/` 布局、三层目录与 Facade 骨架、`src/constants.ts` 常量骨架、移除占位命令。详见 `400-build` §3.1 | ★★☆☆☆ | 1.5h | `npm run compile` 零错误，Extension Development Host 能加载扩展 | ✅ |
-| 3 | v0.1.0-dev-02 | dev | 设计 | **S1 Contract & ADR**：ADR-001（TS 迁移）/ ADR-002（mock 判定器）落盘，冻结 `jevClient` 签名，回写 `03` 契约状态。详见 `400-build` §3.2 | ★★☆☆☆ | 1h | ADR 已落盘；`03` 状态标注完成；契约检查通过 | ⬜ |
+| 3 | v0.1.0-dev-02 | dev | 设计 | **S1 Contract & ADR**：ADR-001（TS 迁移）/ ADR-002（mock 判定器）落盘，冻结 `jevClient` 签名，回写 `03` 契约状态。详见 `400-build` §3.2 | ★★☆☆☆ | 1h | ADR 已落盘；`03` 状态标注完成；契约检查通过 | ✅ |
 | 4 | v0.1.0-dev-03 | dev | 开发 | **S2 Core & Prototype**：`parseDiff` / `buildContext` / `scoreHunk` 三个纯函数 + Harness 实测数据（双数据源）。详见 `400-build` §3.3 | ★★★★☆ | 3h | Harness 产出 score 分布与字节数分布；三个纯函数单测通过 | ⬜ |
 | 5 | v0.1.0-dev-04 | dev | 开发 | **S3 Standard Finalization**：用实测数据回填 `riskThreshold` / 窗口参数 / payload 上限；契约 `[PLANNED]` → `[CURRENT]`。详见 `400-build` §3.4 | ★★★☆☆ | 1h | `03` 中不再存在无实测依据的阈值 | ⬜ |
 | 6 | v0.1.0-dev-05 | dev | 开发 | **S4 Ingress Migration**：`git` / `configSource` / `config` / `riskEngine` / `commands` 接线与装配。详见 `400-build` §3.5 | ★★★☆☆ | 2h | 命令可触发，能解析出 hunk 数组，`GUARD-01/02` 全绿 | ⬜ |
@@ -51,3 +51,11 @@
 - **发现**：`vsce ls` 确认打包内容仅 `LICENSE` / `README.md` / `package.json` / `out/**`，`src`、测试与 sourcemap 均被正确排除
 - **失误**：无
 - **遗留**：Extension Development Host 加载待真机确认（需用户操作）；`registerCommands()` 待 S4 接入
+
+#### S1 Contract & ADR（c77e80e）
+
+- **概要**：冻结判定服务契约（类型 + `IJevClient` 抽象）并经 infra Facade 导出，使 `core` 只依赖抽象、`v0.1.1` 换真身不动调用方，为整版提供接口边界
+- **偏差**：无
+- **发现**：ADR-001~005 均已落盘且为「已接受」，本步无需新建 ADR；契约结构 lint 全绿、编号集合与状态标记零漂移
+- **失误**：无
+- **遗留**：`decide` 的 mock 实现归 S2（`scoreHunk` 四维加权）
