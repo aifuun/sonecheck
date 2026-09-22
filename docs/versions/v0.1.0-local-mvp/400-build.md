@@ -256,9 +256,10 @@ async function inspect(config: SoneCheckConfig): Promise<RiskItem[]>
 
 - **目标**：把「过滤 → 展示 → 跳转」这条输出侧链路接通，并保证零打扰与可定位。
 - **步骤拆解**：
-  1. `src/core/threshold.ts`：阈值判定与 Top-K 排序（稳定排序）
-  2. `src/ui/riskList.ts`：QuickPick 清单（`[score] 文件:行 · reason`）+ 跳转定位
-  3. `src/ui/status.ts`：状态栏双态（检查中 / All Clear）
+  1. `src/core/threshold.ts`：阈值判定与 Top-K 排序（稳定排序）——本体已随 S4 落地（`§1.2` 冻结 `inspect()` 返回 `RiskItem[]`），本步复核其契约用例
+  2. `src/ui/riskList.ts`：QuickPick 清单（`[score] 文件:行 · reason`，文案 SSOT 见 `04` §1）+ 跳转定位（打开文件 + 光标落到 hunk 起始行）
+  3. `src/ui/status.ts`：状态栏四态（检查中 / 无改动 / All Clear / 已跳过，瞬时态 2s 后隐藏）+ 一次性提示
+  4. `src/ui/commands.ts`：接线分发——结果为**空**走零打扰分支（仅状态栏），非空交给 `riskList`；异常统一经 `status` 提示一次后终止
 - **函数签名与伪代码**：
 
 ```text

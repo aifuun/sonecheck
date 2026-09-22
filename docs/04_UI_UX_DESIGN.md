@@ -20,6 +20,18 @@
 | 5 | QuickPick 清单 | 点击某一条 | 打开对应文件，光标定位到该 hunk 起始行 |
 | 6 | QuickPick 清单 | `Esc` 关闭 | 不改变任何状态，流程结束 |
 
+**清单条目文案（本文为文案 SSOT）**：`[score] 文件:行 · reason`，其中 `reason` 的显示文案如下（机器取值见 `03` §2.4）：
+
+| `reason_code` | 显示文案 |
+|---------------|----------|
+| `AUTH_BOUNDARY` | 鉴权边界 |
+| `DATA_WRITE` | 数据写入 |
+| `CONTRACT_BREAK` | 契约破坏 |
+| `ERROR_HANDLING` | 错误处理 |
+| `STYLE_ONLY` | 样式改动 |
+
+> `score` 以两位小数呈现（如 `[0.42]`）；条目文案保持单行短句（`04` §3.3「动态字号」）。
+
 > 首次使用路径：命令面板 → `SoneCheck: Set Jev API Key` → 输入框（`password: true`，不回显）→ 写入 SecretStorage。
 
 ---

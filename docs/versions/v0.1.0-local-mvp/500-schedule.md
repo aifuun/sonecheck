@@ -25,7 +25,7 @@
 | 4 | v0.1.0-dev-03 | dev | 开发 | **S2 Core & Prototype**：`parseDiff` / `buildContext` / `scoreHunk` 三个纯函数 + Harness 实测数据（双数据源）。详见 `400-build` §3.3 | ★★★★☆ | 3h | Harness 产出 score 分布与字节数分布；三个纯函数单测通过 | ✅ |
 | 5 | v0.1.0-dev-04 | dev | 开发 | **S3 Standard Finalization**：用实测数据回填 `riskThreshold` / 窗口参数 / payload 上限；契约 `[PLANNED]` → `[CURRENT]`。详见 `400-build` §3.4 | ★★★☆☆ | 1h | `03` 中不再存在无实测依据的阈值 | ✅ |
 | 6 | v0.1.0-dev-05 | dev | 开发 | **S4 Ingress Migration**：`git` / `configSource` / `config` / `riskEngine` / `commands` 接线与装配。详见 `400-build` §3.5 | ★★★☆☆ | 2h | 命令可触发，能解析出 hunk 数组，`GUARD-01/02` 全绿 | ✅ |
-| 7 | v0.1.0-dev-06 | dev | 开发 | **S5 Egress Migration**：`threshold` 过滤与 Top-K、QuickPick 清单、跳转定位、状态栏双态。详见 `400-build` §3.6 | ★★★☆☆ | 2h | 真机点击条目可精准跳转；`GUARD-05` 全绿 | ⬜ |
+| 7 | v0.1.0-dev-06 | dev | 开发 | **S5 Egress Migration**：`threshold` 过滤与 Top-K、QuickPick 清单、跳转定位、状态栏双态。详见 `400-build` §3.6 | ★★★☆☆ | 2h | 真机点击条目可精准跳转；`GUARD-05` 全绿 | ✅ |
 | 8 | v0.1.0-dev-07 | dev | 测试 | **S6 Guards & Tests**：5 条防腐守卫 + T1 全量单测 + 契约结构 lint（无条件必跑）。详见 `400-build` §3.7 | ★★★☆☆ | 2h | 守卫全绿、单测全绿、lint 通过 | ⬜ |
 | 9 | v0.1.0-dev-08 | dev | 发布 | **S7 Verification & Close**：真机逐项验收、`.vsix` 打包、Marketplace `0.1.0` 发布、tag 与 Issue 收口。详见 `400-build` §3.8 | ★★☆☆☆ | 1h | `200-spec` §2 八项验收全过；`0.1.0` 已上架 | ⬜ |
 
