@@ -14,12 +14,12 @@
 | 编号 | 状态 | 不变式 | 归属 | 方向 | 真值来源 | 可执行验证 |
 |------|------|--------|------|------|----------|-----------|
 | INV-01 | `[PLANNED]` | 检查流程不得阻断、取消或延迟用户的提交动作；检查的全部失败都必须以「放行」收尾 | `core/riskEngine` | 内部 | 本文 §1 + `00` §3 可用性 | 单测：任一失败分支后仍返回放行（空清单 / `PASS`），且不向上抛错 |
-| INV-02 | `[PLANNED]` | 任何离开本机的 payload 只含 diff hunk 与该 hunk 的限长上下文（**单块 payload ≤ 2KB = 2048 字节，含 `context_code`**），**不得包含完整源文件** | `core/contextBuilder` | 出站 | 本文 §2.1 Request | 单测：`buildContext` 输出的单块字节数 ≤ 2048；`grep`：源码中不得出现读取整文件的调用 |
+| INV-02 | `[CURRENT]` | 任何离开本机的 payload 只含 diff hunk 与该 hunk 的限长上下文（**单块 payload ≤ 2KB = 2048 字节，含 `context_code`**），**不得包含完整源文件** | `core/contextBuilder` | 出站 | 本文 §2.1 Request | 单测：`test/contextBuilder.test.ts` 断言 payload 序列化总长 ≤ 2048；`test/diffParser.test.ts` 断言切分后单块不越界 |
 | INV-03 | `[PLANNED]` | Jev API Key 不得以明文出现在工作区文件、日志、遥测、错误信息或 UI 文本中 | `infra/secrets` | 内部 | 本文 §3 | `grep -rn "jevApiKey" src/ \| grep -v "infra/secrets.ts"` 须无输出；单测：日志字段不含 Key 值 |
 | INV-04 | `[PLANNED]` | Jev 不可用（网络失败 / 超时 / 配额耗尽 / 非 2xx）时必须降级为「静默放行 + 一次性提示」，不得向上抛错终止流程 | `infra/jevClient` | 内部 | 本文 §4 `ERR-01`–`ERR-04` | 契约测试（HTTP 层拦截注入 `401` / `429` / `529` / 超时）：断言返回降级结果、不抛错、仅提示一次 |
 | INV-05 | `[PLANNED]` | 检查过程对工作区严格只读：不得修改、暂存、格式化或删除任何文件 | `infra/git` | 内部 | `02` §3 边界说明 | `grep -rn "git " src/infra/git.ts` 只允许 `diff` / `rev-parse` 等只读子命令；出现 `add` / `commit` / `checkout` / `reset` 即失败 |
 | INV-06 | `[PLANNED]` | 清单中每一项必须可定位到真实存在的文件与行号（禁止展示无法跳转的条目） | `ui/riskList` | 内部 | 本文 §2.2 | 单测：`filePath` 不存在或行号越界的条目被剔除出返回值 |
-| INV-07 | `[PLANNED]` | 风险阈值等判定参数必须来自命名常量或配置，禁止在判定逻辑中硬编码字面量 | `core/threshold` | 内部 | `02` §2 `core/threshold`（`RISK_THRESHOLD` 命名常量） | `grep -rn "0\.85\|2048" src/ \| grep -v "constants.ts"` 须无输出 |
+| INV-07 | `[CURRENT]` | 风险阈值等判定参数必须来自命名常量或配置，禁止在判定逻辑中硬编码字面量 | `core/threshold` | 内部 | `02` §2 `core/threshold`（`RISK_THRESHOLD` 命名常量） | `grep -rnE "\b0\.4\b\|\b2048\b" src/ \| grep -v "constants.ts"` 须无输出 |
 
 **每条契约的必标项**（`dev-meta/docs/06` §4 + §4.2）
 
@@ -48,7 +48,7 @@
 
 ### 2.1 `API-01` JevDecision（出站：sonecheck → Jev）
 
-- **状态**：`[PLANNED]`
+- **状态**：`[CURRENT]`
 - **生效版本**：`v0.1.0` 只兑现**签名与本地派生字段**（`infra/jevClient` 为本地 mock，不发网络、不涉及 API Key）；失败面 `ERR-01`~`ERR-05` 与真实 HTTP 链路归 `v0.1.1`
 - **Path**：`POST https://api.typesafe.ai/v1/systemone`
 - **鉴权**：`Authorization: Bearer <API_KEY>`（Key 存 VS Code SecretStorage，见 §3 `CFG-01`）
@@ -200,12 +200,15 @@
 
 ## 3. 存储 Schema
 
-**`CFG-01` 配置项与密钥存储**（状态 `[PLANNED]`）
+**`CFG-01` 配置项与密钥存储**（状态 `[CURRENT]`）
+
+- **生效版本**：`v0.1.0` 兑现 4 项 workspace 配置；`sonecheck.jevApiKey`（SecretStorage 行）随 `API-03` 归 `v0.1.1`。
+- **默认值依据**：`riskThreshold` 默认值由 S2 Harness 实测回填（436 个 hunk：规模噪声地板 `0.20`、语义命中自 `0.40` 起；阈值取噪声地板的 2.0 倍，命中率 1.4%，且敏感路径命中必 `AUDIT`）。
 
 | 实体 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|------|
-| VS Code SecretStorage | `sonecheck.jevApiKey` | `string` | 仅存于 OS 级密钥库；禁止落盘明文 | 违反即 INV-03 |
-| workspace 配置 | `sonecheck.riskThreshold` | `number` | `0.0 < v < 1.0`，默认 `0.85` | 命中即计入清单 |
+| VS Code SecretStorage | `sonecheck.jevApiKey` | `string` | 仅存于 OS 级密钥库；禁止落盘明文 | 违反即 INV-03（**`v0.1.1`**） |
+| workspace 配置 | `sonecheck.riskThreshold` | `number` | `0.0 < v < 1.0`，默认 `0.4`（S3 实测回填） | 命中即计入清单 |
 | workspace 配置 | `sonecheck.maxItems` | `number` | `1 ≤ v ≤ 20`，默认 `3` | 清单条数上限（Top-K） |
 | workspace 配置 | `sonecheck.enabled` | `boolean` | 默认 `true` | 全局开关 |
 | workspace 配置 | `sonecheck.sensitivePathPatterns` | `string[]` | 默认含 `auth` / `payment` / `migration` 等 | 供 `local_metadata.touches_sensitive_path` 使用 |
@@ -239,7 +242,7 @@
 
 - **破坏性变更**（改语义 / 签名 / 坐标口径）：须走 `dm-adr` 记录并同步调用方，**不得静默修改**。
 - **纯增量追加**：标注「纯增量」并回写编号至本表（如 §2.4 新增 `reason_code` 取值）。
-- **状态翻牌**：`[PLANNED]` → `[CURRENT]`（S3 实测数据回填后）；被取代 / 废弃 → 标 `[HISTORY]` 并迁归档，索引保留一行 + 归档指针，**不删除**（`dev-meta/docs/06` §4.2 / §6.5）。
+- **状态翻牌**：`[PLANNED]` → `[CURRENT]` **须以可执行证据为前提，分两批进行**——S3 翻有实测 / 单测 / 守卫依据者（本版为 `INV-02` / `INV-07` / `API-01`（签名与本地派生）/ `CFG-01`），其余兑现项（`INV-01` / `INV-05` / `INV-06` / `API-02` / `ERR-06` / `ERR-07` / `ERR-09`）随 S6 守卫与单测全绿后翻牌；被取代 / 废弃 → 标 `[HISTORY]` 并迁归档，索引保留一行 + 归档指针，**不删除**（`dev-meta/docs/06` §4.2 / §6.5）。
 - **引用单向**：本文**只被引用，不引用下游**（版本文档 / 计划 / 上层规格）；消费方在**自己文档内**声明引用（`dev-meta/docs/06` §7.1）。
 - **只读纪律**：AI 严禁自行改写契约本身；改实现前先 diff 契约（见 `dev-meta/docs/06` §8 与 `dm-contract-gate`）。
 

@@ -52,11 +52,11 @@
 |---|---|---|---|
 | `GUARD-01` | `core/` 层出现 `vscode` 引用 | `grep -rn "from 'vscode'\|require('vscode')" src/core/ && exit 1 \|\| exit 0` | 守 `02` §1 单向分层 |
 | `GUARD-02` | `getConfiguration` 出现在 `infra/configSource.ts` 之外 | `grep -rln "getConfiguration" src/ \| grep -v "infra/configSource.ts"` 须无输出 | 守配置读取唯一出口 |
-| `GUARD-03` | 判定参数被硬编码 | `grep -rn "0\.85\|2048" src/ \| grep -v "constants.ts"` 须无输出 | 守 `INV-07` |
+| `GUARD-03` | 判定参数被硬编码 | `grep -rnE "\b0\.4\b\|\b2048\b" src/ \| grep -v "constants.ts"` 须无输出 | 守 `INV-07` |
 | `GUARD-04` | payload 超过 2048 字节 | 单测断言 `buildContext` 输出 + 其余字段序列化后的 payload 总长 ≤ 2048 字节 | 守 `INV-02` |
 | `GUARD-05` | 清单项无法定位到真实行列 | 单测断言每个 `RiskItem` 的 `filePath` 与 `startLine` 可解析 | 守 `INV-06` |
 
-> **扫描范围**：`GUARD-01` / `GUARD-03` 的 `grep` 只覆盖 `src/`。T1 单测位于 `test/`（见 `300-design` §7），故用例中出现的 `0.85` / `2048` 字面量不会被 `GUARD-03` 误判。
+> **扫描范围**：`GUARD-01` / `GUARD-03` 的 `grep` 只覆盖 `src/`。T1 单测位于 `test/`（见 `300-design` §7），故用例中出现的 `0.4` / `2048` 字面量不会被 `GUARD-03` 误判。
 > **无静态守卫的验收项**：`200-spec` §3 的「Facade 极简暴露」以人工 Review 为准（是否绕过 Facade 取决于 import 形态，单条 `grep` 无法精确判定），不设 `GUARD-0x`。
 
 ---
@@ -204,7 +204,7 @@ buildContext(hunk, sourceLines):
   1. 读取 Harness 输出（score 分布、字节数分布、权重敏感性）
   2. 定 `riskThreshold` 默认值（按分布取「低风险与高风险可分离」的分位点，留 1.5–2.5× 余量）
   3. 定上下文窗口兜底行数 `WINDOW_LINES` 与 payload 总长上限 `MAX_PAYLOAD_BYTES`（上下文截断预算 = 该上限 − 序列化后其余字段字节数）
-  4. 回写 `docs/03`：§3 的默认值、§1 的 `[PLANNED]` → `[CURRENT]`、§2.4 标注本版生效的 5 项枚举
+  4. 回写 `docs/03`：§3 的默认值（`riskThreshold`）、§2.4 标注本版生效的 5 项枚举；状态翻牌**分批**——本步只翻有实测 / 单测证据者（`INV-02` / `INV-07` / `API-01`（签名与本地派生）/ `CFG-01`），其余兑现项（`INV-01` / `INV-05` / `INV-06` / `API-02` / `ERR-06` / `ERR-07` / `ERR-09`）随 S6 守卫与单测全绿后翻牌
 - **输入输出与前置条件**：
   - 输入：S2 的实测数据集
   - 输出：更新后的契约数值与状态
