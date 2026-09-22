@@ -31,7 +31,8 @@
 | Core | `src/core/threshold.ts` | 阈值判定与 Top-K 排序 | 硬编码阈值 |
 | Core | `src/core/config.ts` | 配置模型与校验、默认值归一 | 读取 `workspace` |
 | Infra | `src/infra/configSource.ts` | 唯一读取 `workspace.getConfiguration` 的出口 | 承载业务判断 |
-| Infra | `src/infra/git.ts` | 取工作区根、执行 `git diff --staged` | 修改工作区 |
+| Infra | `src/infra/git.ts` | 取工作区根、执行 `git diff --staged`，并把本机失败分类为 `ERR-06` / `ERR-09` | 修改工作区 |
+| Infra | `src/infra/sourceReader.ts` | 只读读取源文件行（缺失返回空数组），供上下文截断与可定位判定 | 写入 / 修改文件 |
 | Infra | `src/infra/diffParser.ts` | diff 文本 → hunk 数组 | 依赖 `vscode` |
 | Infra | `src/infra/jevClient.ts` | 判定请求（本版为本地 mock 实现） | 依赖 `vscode` |
 
@@ -63,7 +64,7 @@
 | 5 | `core/riskEngine` | `infra/git` | 工作区根 |
 | 6 | `infra/git` | `core/riskEngine` | 暂存区 diff 原始文本 |
 | 7 | `core/riskEngine` | `infra/diffParser` | diff 文本 → `Hunk[]` |
-| 8 | `core/riskEngine` | `core/contextBuilder` | 每个 `Hunk` 补上下文 → payload |
+| 8 | `core/riskEngine` | `core/contextBuilder` | 每个 `Hunk` 补上下文 → payload（源文件行由 `infra/sourceReader` 只读提供） |
 | 9 | `core/riskEngine` | `infra/jevClient` | payload 数组（本版本地顺序调用） |
 | 10 | `core/riskEngine` | `core/threshold` | `DecisionResult[]` → `RiskItem[]` |
 | 11 | `ui/commands` | `ui/riskList` / `ui/status` | 清单或空集 |

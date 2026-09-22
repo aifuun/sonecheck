@@ -20,6 +20,7 @@
 | `Hunk` | `filePath` / `startLine` / `changeType` / `diffContent` | diff 切块结果（`changeType` 由文件头 `/dev/null` 标记判定，供 payload 组装；超长 hunk 已按 `300-design` §4.3 切分） |
 | `HunkPayload` | `filePath` / `changeType` / `diffHunk` / `contextCode` | 出站请求体（**不含** `local_metadata`，见 `200-spec` §1.1）；序列化时映射为 `03` §2.1 的 snake_case（`file_path` / `change_type` / `diff_hunk` / `context_code`），映射实现归 `infra/jevClient` |
 | `DecisionResult` | `score` / `decision` / `reasonCode` | 判定结果 |
+| `ScoredHunk` | `hunk` / `result` | 判定中间态（hunk 与其判定结果的配对，供过滤与排序） |
 | `RiskItem` | `filePath` / `startLine` / `score` / `reasonCode` | 清单条目（`INV-06` 要求可定位） |
 | `SoneCheckConfig` | `riskThreshold` / `maxItems` / `enabled` / `sensitivePathPatterns` | 归一后配置 |
 
@@ -33,7 +34,7 @@
   - 调用 `decide()` 前 payload 必须已满足 `INV-02`（单块 payload **序列化后总长** ≤ 2048 字节）
 - **返回值约定**：
   - 纯函数式失败**返回空数组或原值**，**不返回 `null` / `undefined`**（依据 `dev-meta/docs/06` §5 失败面契约）
-  - `inspect()` 恒返回 `RiskItem[]`（可能为空），不抛业务异常
+  - `inspect()` 恒返回 `RiskItem[]`（可能为空）；本地失败以**分类失败**（`ERR-06` / `ERR-07` / `ERR-09`）抛出，**不抛未分类异常**（由 `ui/commands` 提示一次后终止，`INV-01`）
   - `filterRisky()` 恒返回数组，排序稳定（同分按 `filePath` 字典序）
 
 ### 1.3 异常与边界
@@ -218,12 +219,13 @@ buildContext(hunk, sourceLines):
 
 - **目标**：把「读 diff → 切块 → 判定」这条输入侧链路从纯函数接成可运行的命令。
 - **步骤拆解**：
-  1. `src/infra/git.ts`：`execSync('git diff --staged', { maxBuffer: <命名常量，如 32 MiB> })`（只读；`maxBuffer` 取自 `constants.ts`）
-  2. `src/infra/configSource.ts`：唯一读取 `workspace.getConfiguration` 的出口
+  1. `src/infra/git.ts`：`execFileSync('git', args, { maxBuffer: GIT_MAX_BUFFER })`（只读；本机失败分类为 `ERR-06` / `ERR-09`）；`src/infra/sourceReader.ts`：只读读取源文件行（缺失返回 `[]`）
+  2. `src/infra/configSource.ts`：唯一读取 `workspace.getConfiguration` 的出口；`package.json` 的 `contributes.configuration` 同步暴露 `CFG-01` 四项（含默认值与取值范围）
   3. `src/core/config.ts`：越界回退默认、缺省补齐
-  4. `src/core/riskEngine.ts`：串起 `git` → `diffParser` → `contextBuilder` → `jevClient`
-  5. `src/ui/commands.ts`：注册 `sonecheck.inspectDiff`，统一异常提示（`ERR-06/07/09`）
-  6. `src/extension.ts`：装配
+  4. `src/core/riskEngine.ts`：串起 `git` → `diffParser` → `contextBuilder` → `jevClient` → `threshold`；决策客户端按 `createClient(policy)` 工厂注入（策略随每次检查的配置变化）；空 diff 抛分类失败 `ERR-07`
+  5. `src/ui/commands.ts`：注册 `sonecheck.inspectDiff`，统一异常提示（`ERR-06/07/09`）与一次性的成功反馈
+  6. `src/extension.ts`：装配（把 infra 能力与客户端工厂注入 `createRiskEngine`）
+- **本步落地范围说明**：`src/core/threshold.ts` 随本步落地——`§1.2` 已冻结 `inspect()` 返回 `RiskItem[]`，而过滤/排序是其必经环节；S5 因此只承担 UI 层落地与 `filterRisky` 的契约用例复核。
 - **函数签名与伪代码**：
 
 ```text
@@ -247,7 +249,7 @@ async function inspect(config: SoneCheckConfig): Promise<RiskItem[]>
 | 函数 | 场景 | 预期（given-when-then） |
 |------|------|------------------------|
 | `normalizeConfig` | 阈值越界 | given `riskThreshold = 1.5` → when 归一 → then 回退为默认值且不抛错 |
-| `inspect` | 无暂存改动 | given 空 diff → when 调用 → then 返回 `[]`，不抛业务异常 |
+| `inspect` | 无暂存改动 | given 空 diff → when 调用 → then 抛出分类失败 `ERR-07`（`ui` 提示一次后终止），不抛未分类异常 |
 | `readStagedDiff` | 工作区只读性 | given 任意仓库状态 → when 调用 → then 调用前后 `git status --porcelain` 完全一致 |
 
 ### 3.6 S5 Egress Migration

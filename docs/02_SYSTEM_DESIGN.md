@@ -15,7 +15,7 @@
 [ Core 决策层 ]  riskEngine：切块编排 → 上下文组装 → 并发判定 → 阈值过滤 → Top-K
           │  只依赖 infra 的 Facade
           ▼
-[ Infra 基础设施层 ]  git 读取 / diff 解析 / Jev HTTP 客户端 / SecretStorage / 结构化日志
+[ Infra 基础设施层 ]  git 读取 / 源文件读取 / diff 解析 / Jev HTTP 客户端 / SecretStorage / 结构化日志
           │
           ▼
 [ 外部 ]  git CLI  ·  Jev Decision API
@@ -47,7 +47,8 @@
 | `src/core/threshold.ts` | 阈值判定与排序（RISK_THRESHOLD 常量，禁魔数） | `filterRisky()` | 私有 |
 | `src/core/config.ts` | 配置模型与校验：校验阈值范围、归一默认值（纯逻辑，**不接触 VS Code API**） | `normalizeConfig()` | 私有 |
 | `src/infra/configSource.ts` | 从 `workspace.getConfiguration` 与 SecretStorage 读取原始配置 / 密钥可用性（唯一接触 VS Code 配置 API 的出口） | `readRawConfig()` / `hasApiKey()` | 私有 |
-| `src/infra/git.ts` | 取工作区根、执行 `git diff --staged` | `readStagedDiff()` | 私有 |
+| `src/infra/git.ts` | 取工作区根、执行 `git diff --staged`（含本地失败分类：`ERR-06` / `ERR-09`） | `resolveRepoRoot()` / `readStagedDiff()` | 私有 |
+| `src/infra/sourceReader.ts` | 只读读取工作区源文件行（供上下文截断；文件缺失返回空数组） | `readSourceLines()` | 私有 |
 | `src/infra/diffParser.ts` | diff 文本 → hunk 数组（文件、起始行、变更类型、内容；超长 hunk 按 payload 上限切分） | `parseDiff()` | 私有 |
 | `src/infra/jevClient.ts` | Jev 决策请求（超时、重试、错误归一：上游状态码 → 契约错误码的唯一映射处） | `IJevClient` / `decide()` | 私有 |
 | `src/infra/secrets.ts` | API Key 读写（VS Code SecretStorage） | `getApiKey()` / `setApiKey()` | 私有 |
