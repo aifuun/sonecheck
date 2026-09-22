@@ -299,7 +299,7 @@ onInspectCompleted(items):
   - 输入：源码与测试
   - 输出：守卫全绿 + 单测全绿
   - 前置条件：S2–S5 已完成
-  - 后置条件：`npm run guard` 与 `npm run test` 均退出码 0
+  - 后置条件：`npm run guard` 与 `npm run test:unit` 均退出码 0（命令口径见 `01` §3；本版无 T2，故不涉及 `test:integration`）
 - **异常与边界**：
   - 异常场景：守卫误报（如注释里出现 `getConfiguration` 字样）
   - 回退策略：守卫命令精确到 import 语句形态，避免子串误判
