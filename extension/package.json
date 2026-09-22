@@ -1,0 +1,41 @@
+{
+  "name": "sonecheck",
+  "displayName": "SoneCheck",
+  "description": "Sub-second System-1 AI code risk inspector for VS Code. Name-reservation release; the first functional release is 0.1.0.",
+  "version": "0.0.1",
+  "publisher": "rolligen",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "code-review",
+    "git-diff",
+    "diff",
+    "risk-analysis",
+    "static-analysis",
+    "jev",
+    "system-1"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aifuun/sonecheck.git",
+    "directory": "extension"
+  },
+  "homepage": "https://github.com/aifuun/sonecheck#readme",
+  "bugs": {
+    "url": "https://github.com/aifuun/sonecheck/issues"
+  },
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "sonecheck.showStatus",
+        "title": "SoneCheck: Show Status"
+      }
+    ]
+  }
+}

@@ -143,3 +143,6 @@ dist
 # in the same repo as the code.
 # See docs/private/README.md
 /docs/private/
+
+# vsce build output
+*.vsix
