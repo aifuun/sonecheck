@@ -1,9 +1,8 @@
 /**
  * Core Facade — the only entry the UI layer may import (`02` §1 Facade discipline).
  *
- * S0: scaffold. Public symbols are re-exported from S2/S4 on
- * (`riskEngine` / `contextBuilder` / `threshold` / `config` plus the project
- * types exchanged across layers). Internal implementations stay private.
+ * S2 exports the pure context builder; `riskEngine`, `threshold` and `config`
+ * follow in S4/S5. Internal implementations stay private.
  */
 
-export {};
+export { buildContext, contextBudgetBytes } from './contextBuilder';

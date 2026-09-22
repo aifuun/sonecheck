@@ -14,6 +14,20 @@
 export const MAX_PAYLOAD_BYTES = 2048;
 
 /**
+ * Exact byte size of the `v0.1.0` wire frame with all four values empty:
+ * `{"file_path":"","change_type":"","diff_hunk":"","context_code":""}`.
+ * `local_metadata` is not part of this version, so the frame is stable.
+ */
+export const PAYLOAD_JSON_FRAME_BYTES = 66;
+
+/**
+ * Bytes reserved for the hunk metadata while chunking: the JSON frame, the file
+ * path, the change type and a minimal context. A hunk whose `diff_hunk` alone
+ * exceeds `MAX_PAYLOAD_BYTES` minus this reserve is split (`300-design` §4.3).
+ */
+export const HUNK_METADATA_RESERVE_BYTES = 512;
+
+/**
  * Fallback context window: lines kept before/after the hunk when scope
  * detection fails (`300-design` §4.1). S3 backfills the final value from S2
  * Harness data.
@@ -31,6 +45,21 @@ export const MAX_ITEMS = 3;
 
 /** Upper bound for `git diff --staged` stdout (bytes) passed to `execSync`. */
 export const GIT_MAX_BUFFER = 32 * 1024 * 1024;
+
+/**
+ * Changed-line count at which the "change size" dimension saturates (`300-design` §4.2).
+ * S3 backfills the final value from S2 Harness data.
+ */
+export const SCALE_CAP_LINES = 30;
+
+/** Mock scoring weights (`300-design` §4.2). Kept here so S3 can retune them in one place. */
+export const WEIGHT_SENSITIVE_PATH = 0.4;
+/** See {@link WEIGHT_SENSITIVE_PATH}. */
+export const WEIGHT_KEYWORD = 0.2;
+/** See {@link WEIGHT_SENSITIVE_PATH}. */
+export const WEIGHT_SCALE = 0.2;
+/** See {@link WEIGHT_SENSITIVE_PATH}. */
+export const WEIGHT_EXPORT = 0.2;
 
 /**
  * Build-time logging switch. `v0.1.0` has no runtime logging at all; the flag
