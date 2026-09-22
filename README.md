@@ -1,6 +1,6 @@
 # SoneCheck
 
-**The sub-second System-1 AI code risk inspector for VS Code.**
+**The sub-second System-1 AI code risk inspector for VS Code and Git hooks.**
 
 SoneCheck reads your staged diff, splits it into hunks, scores each hunk with a
 System-1 decision model, and surfaces only the one to three changes that actually

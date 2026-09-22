@@ -1,7 +1,7 @@
 {
   "name": "sonecheck",
   "version": "0.0.4",
-  "description": "Sub-second System-1 AI code risk inspector for VS Code. Name-reservation release; the first functional release is 0.1.0.",
+  "description": "Sub-second System-1 AI code risk inspector for VS Code and Git hooks. Name-reservation release; the first functional release is 0.1.0.",
   "keywords": [
     "vscode",
     "vscode-extension",
