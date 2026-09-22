@@ -49,50 +49,85 @@
 ### 2.1 `API-01` JevDecision（出站：sonecheck → Jev）
 
 - **状态**：`[PLANNED]`
-- **Path**：<!-- TODO: [dm-init-docs] 待确认 Jev 官方 endpoint -->
-- **Method**：`POST`
+- **Path**：`POST https://api.typesafe.ai/v1/systemone`
+- **鉴权**：`Authorization: Bearer <API_KEY>`（Key 存 VS Code SecretStorage，见 §3 `CFG-01`）
+- **Header**：`Content-Type: application/json`
 - **归属 / 调用方**：`infra/jevClient` / 由 `core/riskEngine` 调用
-- **幂等性**：幂等（同一 hunk 内容重复提交返回语义等价判定）
+- **幂等性**：幂等（同一 `state` + `questions` 重复提交返回语义等价判定）
 - **超时**：单请求超时上限 <!-- TODO: [dm-init-docs] 建议 1500ms -->；超时视为 `ERR-02` 走降级
-- **兼容性**：<!-- TODO: [dm-init-docs] 端点版本策略与字段弃用窗口 -->
+- **版本兼容性**：请求侧固定 `model: "jev-latest"`；响应体 `model` 字段返回**实际执行的锁定版本**（如 `jev-1.13.0`），须写入日志以便追溯判定口径变化
+- **上游规范**：TypeSafe 官方 API reference（`https://docs.typesafe.ai/api`）为唯一权威；本节只登记**本项目使用的子集**，不重定义上游语义
 
-**Request**
+**Request**（全部输入装入 `state`；`questions` 为原子问题映射，key 由本项目定义）
 
 ```json
 {
-  "file_path": "string  // 仓库相对路径",
-  "change_type": "MODIFY | ADD | DELETE",
-  "diff_hunk": "string  // 本块增删行原文",
-  "context_code": "string  // 该块所在作用域的限长上下文（≤2048 字节）",
-  "local_metadata": {
-    "is_exported": "boolean  // 是否导出符号",
-    "caller_count": "number   // 本地静态分析得到的引用计数",
-    "touches_sensitive_path": "boolean  // 是否命中敏感路径规则"
+  "model": "jev-latest",
+  "state": {
+    "file_path": "string  // 仓库相对路径",
+    "change_type": "MODIFY | ADD | DELETE",
+    "diff_hunk": "string  // 本块增删行原文",
+    "context_code": "string  // 该块所在作用域的限长上下文（≤2048 字节）",
+    "local_metadata": {
+      "is_exported": "boolean  // 是否导出符号",
+      "caller_count": "number   // 本地静态分析得到的引用计数",
+      "touches_sensitive_path": "boolean  // 是否命中敏感路径规则"
+    }
+  },
+  "questions": {
+    "risk_score": {
+      "type": "noul",
+      "instructions": "string  // 对该 hunk 的安全性与缺陷风险给出 0–1 判定"
+    },
+    "reason_code": {
+      "type": "choice",
+      "instructions": "string  // 按 §2.4 枚举给出主要风险归因",
+      "criteria": "map<string, string>  // key 为 §2.4 的枚举值，value 为该类的判定说明"
+    }
   }
 }
 ```
 
-**Response**
+**Response**（上游原样返回，本项目**不改编**）
 
 ```json
 {
-  "score": "number   // 0.0 - 1.0 风险分",
-  "decision": "AUDIT | PASS",
-  "reason_code": "string  // 触发原因分类，取值见 §2.4"
+  "model": "jev-1.13.0",
+  "answers": {
+    "risk_score": { "type": "noul", "noul": 0.91 },
+    "reason_code": {
+      "type": "choice",
+      "choice": "AUTH_BOUNDARY",
+      "probabilities": { "AUTH_BOUNDARY": 0.88, "DATA_WRITE": 0.12 },
+      "confidence": 0.81
+    }
+  },
+  "usage": { "input_tokens": 296, "output_tokens": 20 }
 }
 ```
 
+**本地派生**（以下字段**不在** API 响应中，由 `core/riskEngine` 在本地计算）
+
+| 本项目字段 | 派生方式 |
+|---|---|
+| `score` | `answers.risk_score.noul` |
+| `decision` | `answers.risk_score.noul >= riskThreshold ? "AUDIT" : "PASS"`（阈值见 §3 `CFG-01`） |
+| `reasonCode` | `answers.reason_code.choice`（取值见 §2.4） |
+
+> **不采用 `score` 原语**：`noul` 直接给出 0–1 概率，便于与用户自定义阈值做浮点比较；`score` 原语（2–10 级有序谱系）附带的 `legend` 分级理由在 v0.1.x 无消费场景。
+
 **失败面（Failure Face）**
 
-| 错误码 | 场景 | 返回约定 | 是否静默 |
-|--------|------|----------|----------|
-| `ERR-01` | 网络不可达 / DNS 失败 | 判定结果记为「未知」，按 INV-04 放行 | 否（一次性提示） |
-| `ERR-02` | 请求超时 | 同上 | 否（一次性提示） |
-| `ERR-03` | 非 2xx 响应 | 同上，日志记录状态码 | 否（一次性提示） |
-| `ERR-04` | 配额耗尽 / 鉴权失败 | 同上，提示用户检查 API Key | 否（一次性提示） |
-| `ERR-05` | 响应 schema 不合规（缺字段 / 越界 / `reason_code` 不在枚举内） | 该块丢弃不计入清单 | 否（写入日志） |
+| 错误码 | 上游状态码 | 场景 | 返回约定 | 是否静默 |
+|--------|-----------|------|----------|----------|
+| `ERR-01` | —（连接层） | 网络不可达 / DNS 失败 | 判定结果记为「未知」，按 INV-04 放行 | 否（一次性提示） |
+| `ERR-02` | —（本地计时） | 请求超时 | 同上 | 否（一次性提示） |
+| `ERR-03` | 非 2xx 且非下表 | 其他非 2xx 响应 | 同上，日志记录状态码 | 否（一次性提示） |
+| `ERR-04` | `401` / `429` / `529` | 鉴权失败 / 超配额 / 上游过载 | 同上，提示用户检查 API Key；`429` / `529` 先指数退避重试 | 否（一次性提示） |
+| `ERR-05` | `422` | 请求体校验失败，或响应 schema 不合规（缺字段 / 越界 / `reason_code` 不在枚举内） | 该块丢弃不计入清单 | 否（写入日志） |
 
-> **严禁静默吞错**：纯函数式失败返回空 / 原值而非 nil；危险失败不得静默，须调用前拦截并显式暴露（`dev-meta/docs/06` §5）。
+- **重试策略**：仅对 `429` / `529` 做指数退避（上限 <!-- TODO: [dm-init-docs] 建议 2 次 -->），其余状态码不重试。本项目**手写 `fetch` + 退避函数**，不引入官方 SDK（避免额外依赖，见 `01` §2 依赖限制）。
+- **严禁静默吞错**：纯函数式失败返回空 / 原值而非 nil；危险失败不得静默，须调用前拦截并显式暴露（`dev-meta/docs/06` §5）。
 
 ---
 
@@ -140,7 +175,8 @@
 
 ### 2.4 `reason_code` 取值枚举（`API-01` Response 字段）
 
-> `reason_code` 是 `API-01` Response 的分类字段，供 UI 展示（`04` §1 的清单条目）与用户判断依据。
+> `reason_code` 由 `API-01` 的 `choice` 型 question 产出（见 §2.1）——本表的枚举值即该 question `criteria` 的 **key 集合**。
+> 供 UI 展示（`04` §1 的清单条目）与用户判断依据。
 > **不在本表枚举内的取值视为 schema 不合规**，按 `ERR-05` 丢弃该块。
 
 | 取值 | 含义 | 典型触发场景 | 生效版本 |

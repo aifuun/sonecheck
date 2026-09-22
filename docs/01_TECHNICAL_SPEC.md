@@ -13,7 +13,7 @@
 | 语言 / 运行时 | TypeScript + Node.js | Node 22.x（VS Code 内置运行时） | 与 VS Code Extension API 同源，零额外分发成本 |
 | 框架 | VS Code Extension API（无 Webview 框架） | VS Code 稳定版 | 原生 QuickPick / 状态栏足以覆盖 v0.1.0 交互，避免 Webview 调试开销 |
 | 存储 | VS Code `SecretStorage`（Key）+ `workspace.getConfiguration`（阈值、开关） | — | Key 不落盘明文；配置跟随用户设置同步 |
-| 第三方服务 | Jev Decision API（TypeSafe AI） | <!-- TODO: [dm-init-docs] API 版本与 endpoint --> | System-1 结构化判定，输出免费、延迟量级为亚秒级；是本产品的成本与速度前提，实际延迟须经 M1 实测回填 |
+| 第三方服务 | Jev Decision API（TypeSafe AI） | `POST https://api.typesafe.ai/v1/systemone`；`model: "jev-latest"`（官方文档 `https://docs.typesafe.ai/api`） | System-1 结构化判定（`noul` / `choice` / `score` 三原语），输出免费、延迟量级为亚秒级；是本产品的成本与速度前提，实际延迟须经 M1 实测回填。契约见 `03` §2.1 |
 | 构建 / 打包 | `@vscode/vsce` → `.vsix` | <!-- TODO --> | 官方打包链，支持 GitHub Release 与 Marketplace 双通道 |
 | 测试框架 | <!-- TODO: [dm-init-docs] vitest / mocha + @vscode/test-electron --> | <!-- TODO --> | 需同时覆盖纯逻辑单测与扩展宿主集成测试 |
 
@@ -48,6 +48,10 @@
 
 - **AI 生成测试的硬约束**：须断言具体边界值（空输入 / 极值 / 越界），禁止无断言的假 Green（见 `dev-meta/docs/06` §5 失败面契约）。
 - **不写 TDD 的范围**：QuickPick / 状态栏等原生 UI 呈现层（VS Code 原生控件、无逻辑分支），以 T3 真机验证替代；原因：组件无法在纯 Node 环境复现。
+- **判定服务的 Mock 分层**（`infra/jevClient` 的测试策略，`v0.1.1` 接入真实客户端前即按此设计）：
+  - **T1（单元）——依赖注入**：`core` 依赖 `IJevClient` 抽象而非具体实现，测试注入内存 stub。毫秒级、无网络，覆盖切块 / 打分 / 过滤 / 排序等纯逻辑。
+  - **T2（契约 / 集成）——网络层拦截**：保留客户端**全部**逻辑（Header 拼装、超时计时、`429` / `529` 指数退避），用 MSW 或 `nock` 在 HTTP 层返回构造响应，验证 `401` / `422` / `429` / `529` 各自的降级表现。
+  - **红线**：T1 中不得 mock 掉退避与超时——那属 T2 覆盖范围，在 T1 里「测过」等于没测。
 
 ---
 
