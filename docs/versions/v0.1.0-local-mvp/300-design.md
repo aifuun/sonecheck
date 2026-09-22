@@ -1,0 +1,148 @@
+# v0.1.0 设计 — local-mvp
+
+> 结构唯一权威：`docs/02-version-rules.md` §5。
+> ⚠️ 本文件不得出现 `Transaction Flow` / `TF` / `Step` 章节（施工拆分属 `400-build.md`）。
+> 需求侧范围与验收见 `200-spec.md`；施工拆分见 `400-build.md`。
+
+---
+
+## 1. 架构背景与目标
+
+- **架构目标**：把 `extension/` 从纯 JavaScript 占位升级为 TypeScript 三层工程，使 `02` §1 的分层纪律与 `02` §2 的模块划分首次落到真实代码上。
+- **上一版本基线**：`extension/package.json`（`0.0.1`，`publisher: rolligen`，`main: ./extension.js`）+ `extension/extension.js`（仅注册 `sonecheck.showStatus`）。根目录 npm 占位包已冻结于 `0.0.x`，本版不触碰。
+- **影响范围**：仅 `extension/` 目录。`docs/00~06` 只在契约状态上回写（`[PLANNED]` → `[CURRENT]`），不改语义。
+
+---
+
+## 2. 架构与分层
+
+- **全局架构**：沿用 `02` §1 的三层单向分层，不新增层。
+- **分层落位**：
+
+| 层 | 文件 | 职责 | 禁止 |
+|---|---|---|---|
+| 装配 | `src/extension.ts` | `activate()` 注册命令与组装依赖、`deactivate()` 清理 | 承载业务逻辑 |
+| UI | `src/ui/commands.ts` | 命令编排：读配置 → 调 core → 分发结果 | 直接调 git / HTTP |
+| UI | `src/ui/riskList.ts` | QuickPick 清单与跳转定位 | 计算风险分 |
+| UI | `src/ui/status.ts` | 状态栏双态与一次性提示 | 直连 core 内部 |
+| Core | `src/core/riskEngine.ts` | 主流程编排：切块 → 组装 → 判定 → 过滤 | 引用 `vscode` 做 IO |
+| Core | `src/core/contextBuilder.ts` | 上下文截取（作用域识别 + 兜底） | 引用 `vscode` |
+| Core | `src/core/threshold.ts` | 阈值判定与 Top-K 排序 | 硬编码阈值 |
+| Core | `src/core/config.ts` | 配置模型与校验、默认值归一 | 读取 `workspace` |
+| Infra | `src/infra/configSource.ts` | 唯一读取 `workspace.getConfiguration` 的出口 | 承载业务判断 |
+| Infra | `src/infra/git.ts` | 取工作区根、执行 `git diff --staged` | 修改工作区 |
+| Infra | `src/infra/diffParser.ts` | diff 文本 → hunk 数组 | 依赖 `vscode` |
+| Infra | `src/infra/jevClient.ts` | 判定请求（本版为本地 mock 实现） | 依赖 `vscode` |
+
+- **Facade**：`src/core/index.ts`、`src/infra/index.ts` 各只 re-export 公开符号，内部实现全部私有。
+
+### 2.1 防腐设计
+
+| 关注点 | 设计约束 |
+|---|---|
+| 类型边界 | 层间只交换项目自有类型（`Hunk` / `RiskItem` / `DecisionResult` / `SoneCheckConfig`）；`vscode` 类型**只允许**出现在 `src/ui/**` 与 `src/infra/configSource.ts` |
+| 错误域边界 | 本地失败只落 `ERR-06`（非 git 仓库）/ `ERR-07`（无暂存改动）/ `ERR-09`（git 缺失）；`core` 不做 `try-catch`，异常沿调用链上抛至 `ui/commands` 统一提示一次后终止；**不静默吞错** |
+| 模块物理路径 | `src/{ui,core,infra}` → tsc 编译 → `out/{ui,core,infra}`；入口 `src/extension.ts` → `out/extension.js` |
+| 工程登记 | `package.json` 的 `main` 改为 `./out/extension.js`；`.vscodeignore` 排除 `src/`、`tsconfig.json`、`**/*.map` |
+
+---
+
+## 3. 数据流与状态机
+
+**关键数据流**（对应 `02` §3 主链路）
+
+| 步骤 | 发起方 | 接收方 | 数据 |
+|---|---|---|---|
+| 1 | 用户 | `ui/commands` | 触发命令 `sonecheck.inspectDiff` |
+| 2 | `ui/commands` | `infra/configSource` | 读取原始配置 |
+| 3 | `ui/commands` | `core/config` | 归一为 `SoneCheckConfig` |
+| 4 | `ui/commands` | `core/riskEngine` | 传入已归一配置 |
+| 5 | `core/riskEngine` | `infra/git` | 工作区根 |
+| 6 | `infra/git` | `core/riskEngine` | 暂存区 diff 原始文本 |
+| 7 | `core/riskEngine` | `infra/diffParser` | diff 文本 → `Hunk[]` |
+| 8 | `core/riskEngine` | `core/contextBuilder` | 每个 `Hunk` 补上下文 → payload |
+| 9 | `core/riskEngine` | `infra/jevClient` | payload 数组（本版本地顺序调用） |
+| 10 | `core/riskEngine` | `core/threshold` | `DecisionResult[]` → `RiskItem[]` |
+| 11 | `ui/commands` | `ui/riskList` / `ui/status` | 清单或空集 |
+| 12 | `ui/riskList` | VS Code 编辑器 | 打开文件 + 定位行列 |
+
+**状态跃迁**（对应 `02` §4）
+
+| 状态 | 说明 | 跃迁条件 |
+|---|---|---|
+| `Idle` | 空闲 | 命令触发 → `Collecting` |
+| `Collecting` | 读取 diff 与切块 | 成功 → `Deciding`；无改动 → 终止（`ERR-07`） |
+| `Deciding` | 逐块判定与过滤 | 完成 → `Reporting` |
+| `Reporting` | 展示清单或状态提示 | 用户关闭 → `Idle` |
+
+> 本版**不实现 `Degraded`**：判定器为本地纯函数，不存在网络失败分支。该状态留待 `v0.1.1` 引入真实客户端时补入。
+
+---
+
+## 4. 核心算法方案
+
+本版核心算法有两处：**上下文截取**与**多维加权判定**。
+
+### 4.1 上下文截取（作用域识别）
+
+- **方案**：对 hunk 起始行做**括号配对回溯**——自改动行向上扫描，找到第一个使括号深度归零的 `{`，即为所在作用域起点；再向下扫描至深度归零，取该区间行文本作为 `context_code`。
+- **兜底**：无法定位时（非 C 系语法、单行文件、括号不平衡），退化为「hunk 前后各 10 行」的固定窗口。
+- **硬上限**：结果按 **2048 字节**截断（`INV-02`），截断时从尾部长截以保留改动行所在片段。
+- **选型理由**：比固定窗口更贴合「评审者需要看整个函数」的实际需求，而实现成本显著低于引入 AST 解析器。
+
+### 4.2 多维加权判定（mock 判定器）
+
+| 维度 | 取值 | 初始权重 | 判定方式 |
+|---|---|---|---|
+| 敏感路径 | 0 / 1 | **0.40** | 文件路径匹配 `CFG-01` 的 `sensitivePathPatterns` |
+| 关键词模式 | 0 – 1 | 0.20 | diff 命中 `auth` / `token` / `password` / `session` / `delete` / `catch` / `transaction` 等模式的比例 |
+| 改动规模 | 0 – 1 | 0.20 | 增删行数映射（超阈值封顶） |
+| 导出符号 | 0 / 1 | 0.20 | 改动行是否触及 `export` / `public` 声明 |
+
+- **合成分**：`score = Σ(维度值 × 权重)`，截断到 `[0, 1]`。
+- **判定**：`score ≥ riskThreshold` → `decision = AUDIT`，否则 `PASS`。
+- **`reason_code`**：取**权重最高的命中维度**对应的枚举。本版落地 `AUTH_BOUNDARY` / `DATA_WRITE` / `CONTRACT_BREAK` / `ERROR_HANDLING` / `STYLE_ONLY` 五项；未命中任何维度时返回 `STYLE_ONLY`。
+- **选型理由**：权重可调、维度可解释，四个维度的原始值都能在 Harness 中统计分布，满足规范 §6.3「实测后定案」的要求。
+
+---
+
+## 5. 关键决策（ADR）
+
+| 决策 | 备选方案 | 选择理由 | 影响 |
+|---|---|---|---|
+| 扩展迁移 TypeScript，布局 `src/` → `out/` | 保持 JS；`src/` → `dist/` | 与 `01` §1 选型一致；`src` + `out` 是 VS Code 官方模板惯例，后续查文档与抄示例零摩擦 | `main` 改为 `./out/extension.js`；`.vscodeignore` 排除 `src/` |
+| 判定服务先用 mock 实现，与真实客户端**同签名** | 等 endpoint 确认再开工 | `05` §4 的既定风险预案；接口层隔离后，`v0.1.1` 只替换 `infra/jevClient` 实现 | `infra/jevClient` 的公开签名即为契约，`v0.1.1` 不得变更 |
+| 上下文截取用轻量作用域识别 + 固定窗口兜底 | 纯固定窗口；引入 AST 解析器 | 更贴合评审需求，实现成本显著低于 AST | `contextBuilder` 须处理括号不平衡等边界 |
+| `reason_code` 本版只兑现 5 项 | 全部 7 项；只返回 `UNKNOWN` | `CONFIG_CHANGE` / `HIGH_FANOUT` 需配置解析与引用计数能力，本版不具备；返回 `UNKNOWN` 会让清单缺少可读原因 | `03` §2.4 的枚举表须标注哪几项在 `v0.1.0` 生效 |
+
+> 技术选型类决策（TS 迁移、mock 判定器）须触发 `dm-adr` 落盘——在契约与决策记录阶段由 `dm-adr` 产出 ADR 并回填编号至此表。
+
+---
+
+## 6. 与现有版本的继承关系
+
+| 现有能力 / 模块 | 本版本变更 |
+|---|---|
+| `extension/extension.js`（占位） | **删除**，由 `src/extension.ts` 的编译产物取代 |
+| 命令 `sonecheck.showStatus` | **移除**，由 `sonecheck.inspectDiff` 取代 |
+| `extension/package.json` 的 `main` | `./extension.js` → `./out/extension.js` |
+| `extension/package.json` 的 `contributes.commands` | 替换为 `sonecheck.inspectDiff` |
+| 根目录 npm 占位包（`0.0.x`） | **不变**，本版不触碰 |
+| `docs/03` 的契约状态 | 本版兑现项由 `[PLANNED]` 翻为 `[CURRENT]` |
+
+---
+
+## 7. 测试策略
+
+| 关注点 | 测试级别 | 关键场景 | 环境依赖 |
+|---|---|---|---|
+| diff 解析 | 单元 | 多文件 / 新增 / 删除 / 重命名 / 空 diff / 二进制文件跳过 | 纯 Node，无 `vscode` |
+| 上下文截取 | 单元 | 括号平衡 / 不平衡走兜底 / 超 2KB 截断且保留改动行 | 纯 Node |
+| 判定打分 | 单元 | 四维各自命中 / 全不命中 / 合成边界（0 与 1） | 纯 Node |
+| 阈值过滤与 Top-K | 单元 | 全低风险 / 全高风险 / 恰好等于阈值 / 条数超上限 | 纯 Node |
+| 配置归一 | 单元 | 越界值回退默认 / 缺省字段补齐 | 纯 Node |
+| 命令编排 | 集成 | 触发命令 → 清单弹出 → 选中跳转 | Extension Host（人工验证） |
+| 无改动路径 | 集成 | 暂存区为空时的提示与终止 | Extension Host（人工验证） |
+
+- **单元覆盖对象**：本版核心逻辑（解析 / 截取 / 打分 / 过滤 / 归一）全部可纯 Node 测试，构成 T1 的主要覆盖面。
+- **不写单测的部分**：`ui/**` 的原生控件交互无法在纯 Node 复现，以真机验证替代——依据见 `01` §3。
