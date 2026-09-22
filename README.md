@@ -8,11 +8,13 @@ deserve your eyes before you commit.
 
 ---
 
-## Status: `0.0.1` is a name reservation
+## Status: `0.0.4` is a name reservation
 
-**This release contains no functional implementation.** It reserves the
-`sonecheck` package name ahead of the first working version, `0.1.0`. Every
-exported API throws a descriptive error rather than failing silently:
+**The npm package contains no functional implementation.** It only reserves the
+`sonecheck` name; the working product is the VS Code extension in
+[`extension/`](https://github.com/rolligen/sonecheck/tree/main/extension), whose
+`0.1.0` release runs the local MVP. Every exported API of this package throws a
+descriptive error rather than failing silently:
 
 ```js
 const { inspectStaged } = require('sonecheck');
