@@ -18,7 +18,7 @@
 | 类型 | 字段 | 说明 |
 |---|---|---|
 | `Hunk` | `filePath` / `startLine` / `diffContent` | diff 切块结果 |
-| `HunkPayload` | `filePath` / `changeType` / `diffHunk` / `contextCode` | 出站请求体（**不含** `local_metadata`，见 `200-spec` §1.1） |
+| `HunkPayload` | `filePath` / `changeType` / `diffHunk` / `contextCode` | 出站请求体（**不含** `local_metadata`，见 `200-spec` §1.1）；序列化时映射为 `03` §2.1 的 snake_case（`file_path` / `change_type` / `diff_hunk` / `context_code`），映射实现归 `infra/jevClient` |
 | `DecisionResult` | `score` / `decision` / `reasonCode` | 判定结果 |
 | `RiskItem` | `filePath` / `startLine` / `score` / `reasonCode` | 清单条目（`INV-06` 要求可定位） |
 | `SoneCheckConfig` | `riskThreshold` / `maxItems` / `enabled` / `sensitivePathPatterns` | 归一后配置 |
@@ -30,7 +30,7 @@
 - **调用顺序**：`ui/commands` → `core/config.normalize` → `core/riskEngine.inspect` → `infra/git` → `infra/diffParser` → `core/contextBuilder` → `infra/jevClient` → `core/threshold` → `ui/riskList` / `ui/status`
 - **前置条件**：
   - 调用 `inspect()` 前配置必须已归一（未归一的越界值不得进入判定）
-  - 调用 `decide()` 前 payload 必须已满足 `INV-02`（单块 ≤ 2048 字节）
+  - 调用 `decide()` 前 payload 必须已满足 `INV-02`（单块 payload **序列化后总长** ≤ 2048 字节）
 - **返回值约定**：
   - 纯函数式失败**返回空数组或原值**，**不返回 `null` / `undefined`**（依据 `dev-meta/docs/06` §5 失败面契约）
   - `inspect()` 恒返回 `RiskItem[]`（可能为空），不抛业务异常
@@ -41,7 +41,7 @@
 - **失败重试**：本版不适用（判定器为本地纯函数，无网络）
 - **并发冲突**：本版不适用（顺序调用；并发上限 4 的实现留待 `v0.1.1`）
 - **配额不足**：本版不适用
-- **大数据量**：`context_code` 硬上限 2048 字节；hunk 总数不设上限，但清单条数由 `maxItems` 截断
+- **大数据量**：payload 序列化总长硬上限 2048 字节（`context_code` 按剩余预算截断）；hunk 总数不设上限，但清单条数由 `maxItems` 截断
 - **异常归属**（`200-spec` §1 约定）：本地失败只落 `ERR-06` / `ERR-07` / `ERR-09`；其余异常向上抛至 `ui/commands` 提示一次后终止，**不静默吞**
 
 ### 1.4 防腐契约
@@ -53,10 +53,11 @@
 | `GUARD-01` | `core/` 层出现 `vscode` 引用 | `grep -rn "from 'vscode'\|require('vscode')" src/core/ && exit 1 \|\| exit 0` | 守 `02` §1 单向分层 |
 | `GUARD-02` | `getConfiguration` 出现在 `infra/configSource.ts` 之外 | `grep -rln "getConfiguration" src/ \| grep -v "infra/configSource.ts"` 须无输出 | 守配置读取唯一出口 |
 | `GUARD-03` | 判定参数被硬编码 | `grep -rn "0\.85\|2048" src/ \| grep -v "constants.ts"` 须无输出 | 守 `INV-07` |
-| `GUARD-04` | payload 超过 2048 字节 | 单测断言 `buildContext` 输出字节数 ≤ 2048 | 守 `INV-02` |
+| `GUARD-04` | payload 超过 2048 字节 | 单测断言 `buildContext` 输出 + 其余字段序列化后的 payload 总长 ≤ 2048 字节 | 守 `INV-02` |
 | `GUARD-05` | 清单项无法定位到真实行列 | 单测断言每个 `RiskItem` 的 `filePath` 与 `startLine` 可解析 | 守 `INV-06` |
 
 > **扫描范围**：`GUARD-01` / `GUARD-03` 的 `grep` 只覆盖 `src/`。T1 单测位于 `test/`（见 `300-design` §7），故用例中出现的 `0.85` / `2048` 字面量不会被 `GUARD-03` 误判。
+> **无静态守卫的验收项**：`200-spec` §3 的「Facade 极简暴露」以人工 Review 为准（是否绕过 Facade 取决于 import 形态，单条 `grep` 无法精确判定），不设 `GUARD-0x`。
 
 ---
 
@@ -87,10 +88,10 @@
 - **目标**：`extension/` 从纯 JS 占位变为可编译、可调试的 TypeScript 三层工程骨架，且不含任何业务逻辑。
 - **步骤拆解**：
   1. 删除 `extension.js`；新建 `src/extension.ts`（仅 `activate` / `deactivate` 空壳）
-  2. 新建 `src/ui/` `src/core/` `src/infra/` 三个目录与 `core/index.ts`、`infra/index.ts` 两个 Facade（先只放类型导出）
+  2. 新建 `src/ui/` `src/core/` `src/infra/` 三个目录、`core/index.ts` / `infra/index.ts` 两个 Facade（先只放类型导出）与 **`src/constants.ts`**（命名常量骨架：判定阈值、payload 上限、上下文窗口、构建期日志开关；纯数据、无逻辑）
   3. 新增 `tsconfig.json`：`target: ES2022`、`module: commonjs`、`rootDir: ./src`、`outDir: ./out`、`strict: true`、`sourceMap: true`
-  4. `package.json`：`main` 改 `./out/extension.js`；`contributes.commands` 从 `sonecheck.showStatus` 换为 `sonecheck.inspectDiff`；新增 `scripts`（`compile` / `watch` / `package`）；新增 `devDependencies`（`typescript ~5.7.0` / `@types/node ^22.0.0` / `@types/vscode` / `@vscode/vsce ^4.0` / `vitest ^5.0` / `msw ^2.15`）——**`@types/node` 必须锁 22.x 与宿主运行时对齐，禁止跟随 npm 最新大版本**
-  5. `.vscodeignore` 增加 `src/`、`test/`、`tsconfig.json`、`**/*.map`
+  4. `package.json`：`main` 改 `./out/extension.js`；`contributes.commands` 从 `sonecheck.showStatus` 换为 `sonecheck.inspectDiff`（并写死 `title: "SoneCheck: Inspect Staged Diff"`，与 `04` §1 一致）；新增 `scripts`（`compile` / `watch` / `package` / `test:unit` / `test`——`test` 为 T1 聚合别名，`guard` 与 `test:integration` 分别在 S6 与引入真实客户端时补）；新增 `devDependencies`（`typescript ~5.7.0` / `@types/node ^22.0.0` / `@types/vscode` / `@vscode/vsce ^4.0` / `vitest ^5.0` / `msw ^2.15`）——**`@types/node` 必须锁 22.x 与宿主运行时对齐，禁止跟随 npm 最新大版本**
+  5. `.vscodeignore` 增加 `src/`、`test/`、`harness/`、`tsconfig.json`、`**/*.map`（`harness/` 是 S2 的一次性测量脚本，不进打包产物）
 - **函数签名与伪代码**：
 
 ```text
@@ -122,14 +123,14 @@ activate(context):
 
 - **目标**：冻结 `infra/jevClient` 的公开签名（`v0.1.1` 换真实实现时不得变更），并把两项技术选型沉淀为 ADR。
 - **步骤拆解**：
-  1. 调 `dm-adr` 产出 **ADR-001**（扩展迁移 TypeScript + `src/out` 布局）与 **ADR-002**（mock 判定器与接口隔离策略）
+  1. 调 `dm-adr` 产出 **ADR-001**（扩展迁移 TypeScript + `src/out` 布局）与 **ADR-002**（mock 判定器与接口隔离策略）；测试框架 ADR-003、手写 `fetch` ADR-004、`noul` 原语 ADR-005 已在立项阶段落盘，本步只做核对与回填编号
   2. 在 `src/infra/jevClient.ts` 写死公开签名（本版为本地 mock 实现）
   3. 回写 `docs/03`：标注本版兑现的契约与生效的 `reason_code` 子集
 - **函数签名与伪代码**：
 
 ```text
 async function decide(payload: HunkPayload): Promise<DecisionResult>
-// 前置条件：payload.contextCode 字节数 ≤ 2048（由调用方保证）
+// 前置条件：payload 序列化后总长 ≤ 2048 字节（含 contextCode，由调用方保证）
 // 调用时机：riskEngine 对每个 Hunk 组装 payload 后
 // 不变量（本版与 v0.1.1 共同遵守）：签名与 DecisionResult 字段不得变更
 ```
@@ -140,7 +141,7 @@ async function decide(payload: HunkPayload): Promise<DecisionResult>
   - 前置条件：payload 已通过 `INV-02` 校验
   - 后置条件：同输入必得同输出（幂等）
 - **异常与边界**：
-  - 异常场景：`contextCode` 超限
+  - 异常场景：payload 序列化后总长超限（含 `contextCode`）
   - 回退策略：由 `contextBuilder` 在组装阶段截断，`decide` 不再重复校验（单一职责）
 
 #### 关键行为契约
@@ -155,9 +156,9 @@ async function decide(payload: HunkPayload): Promise<DecisionResult>
 - **目标**：在隔离环境中把三处纯逻辑抽成无 IO 依赖的函数，并用 Harness 跑出用于 S3 定阈值的真实数据。
 - **步骤拆解**：
   1. `src/infra/diffParser.ts`：diff 文本 → `Hunk[]`
-  2. `src/core/contextBuilder.ts`：括号配对作用域识别 + 固定窗口兜底 + 2048 字节截断
-  3. `src/infra/jevClient.ts` 的 mock 实现：四维加权打分（权重见 `300-design` §4.2）
-  4. Harness 脚本 `harness/measure.ts`：对**本项目 git 历史 diff** 与**构造样本仓库**跑统计，输出：hunk 数分布、四维命中率、score 分布、`context_code` 字节数分布
+  2. `src/core/contextBuilder.ts`：括号配对作用域识别 + 固定窗口兜底 + 按 payload 剩余预算截断（总长 ≤ `MAX_PAYLOAD_BYTES`）
+  3. `src/infra/jevClient.ts` 的 mock 实现：四维加权打分（`scoreHunk`；权重见 `300-design` §4.2）
+  4. Harness 脚本 `harness/measure.ts`：对**本项目 git 历史 diff** 与**构造样本仓库**跑统计，输出：hunk 数分布、四维命中率、score 分布、`context_code` 字节数分布（运行方式 `npx tsx harness/measure.ts`；该目录不进打包产物，已在 S0 的 `.vscodeignore` 排除）
 - **函数签名与伪代码**：
 
 ```text
@@ -172,12 +173,13 @@ buildContext(hunk, sourceLines):
   if scope is null:
     scope = fixedWindow(hunk.startLine, WINDOW_LINES)       // 兜底
   text = join(sourceLines[scope])
-  return truncateToBytes(text, MAX_PAYLOAD_BYTES, keep = hunk 改动行)
+  budget = MAX_PAYLOAD_BYTES - byteLength(序列化后的其余字段)   // file_path / change_type / diff_hunk
+  return truncateToBytes(text, budget, keep = hunk 改动行)    // 使 payload 序列化总长 ≤ MAX_PAYLOAD_BYTES
 ```
 
 - **输入输出与前置条件**：
   - 输入：diff 文本 / hunk 与源文件行数组
-  - 输出：`Hunk[]` / 上下文字符串（≤ 2048 字节）
+  - 输出：`Hunk[]` / 上下文字符串（使 payload 序列化总长 ≤ 2048 字节）
   - 前置条件：`sourceLines` 来自只读读取，不得修改
   - 后置条件：纯函数，无副作用，可重复调用
 - **异常与边界**：
@@ -190,8 +192,8 @@ buildContext(hunk, sourceLines):
 |------|------|------------------------|
 | `parseDiff` | 空输入 | given `""` → when 调用 → then 返回 `[]`，不抛错 |
 | `parseDiff` | 二进制文件 | given 含 `Binary files differ` 的 diff → when 调用 → then 跳过该文件，不出现在结果中 |
-| `buildContext` | 括号不平衡 | given 无法定位作用域 → when 调用 → then 走固定窗口兜底，结果仍 ≤ 2048 字节 |
-| `buildContext` | 超长作用域 | given 作用域超过 2048 字节 → when 调用 → then 从尾部长截，且改动行仍存在于结果中 |
+| `buildContext` | 括号不平衡 | given 无法定位作用域 → when 调用 → then 走固定窗口兜底，payload 序列化总长仍 ≤ 2048 字节 |
+| `buildContext` | 超长作用域 | given 作用域超过上下文剩余预算 → when 调用 → then 从尾部长截，且改动行仍存在于结果中 |
 | `scoreHunk` | 敏感路径命中 | given 路径含 `auth/` → when 调用 → then `score ≥ 0.4` 且 `reasonCode = AUTH_BOUNDARY` |
 | `scoreHunk` | 仅样式改动 | given 只改空白与引号 → when 调用 → then `score < 阈值` 且 `reasonCode = STYLE_ONLY` |
 
@@ -201,7 +203,7 @@ buildContext(hunk, sourceLines):
 - **步骤拆解**：
   1. 读取 Harness 输出（score 分布、字节数分布、权重敏感性）
   2. 定 `riskThreshold` 默认值（按分布取「低风险与高风险可分离」的分位点，留 1.5–2.5× 余量）
-  3. 定上下文窗口兜底行数 `WINDOW_LINES` 与 `MAX_PAYLOAD_BYTES`
+  3. 定上下文窗口兜底行数 `WINDOW_LINES` 与 payload 总长上限 `MAX_PAYLOAD_BYTES`（上下文截断预算 = 该上限 − 序列化后其余字段字节数）
   4. 回写 `docs/03`：§3 的默认值、§1 的 `[PLANNED]` → `[CURRENT]`、§2.4 标注本版生效的 5 项枚举
 - **输入输出与前置条件**：
   - 输入：S2 的实测数据集
@@ -216,7 +218,7 @@ buildContext(hunk, sourceLines):
 
 - **目标**：把「读 diff → 切块 → 判定」这条输入侧链路从纯函数接成可运行的命令。
 - **步骤拆解**：
-  1. `src/infra/git.ts`：`execSync('git diff --staged')`（只读）
+  1. `src/infra/git.ts`：`execSync('git diff --staged', { maxBuffer: <命名常量，如 32 MiB> })`（只读；`maxBuffer` 取自 `constants.ts`）
   2. `src/infra/configSource.ts`：唯一读取 `workspace.getConfiguration` 的出口
   3. `src/core/config.ts`：越界回退默认、缺省补齐
   4. `src/core/riskEngine.ts`：串起 `git` → `diffParser` → `contextBuilder` → `jevClient`
@@ -237,8 +239,8 @@ async function inspect(config: SoneCheckConfig): Promise<RiskItem[]>
   - 前置条件：工作区为 git 仓库且存在暂存改动
   - 后置条件：工作区内容零变化（`INV-05`）
 - **异常与边界**：
-  - 异常场景：非 git 仓库（`ERR-06`）、git 缺失（`ERR-09`）、暂存区为空（`ERR-07`）
-  - 回退策略：三者均提示一次后终止；其余异常上抛至 `ui/commands` 统一处理
+  - 异常场景：非 git 仓库（`ERR-06`）、git 缺失（`ERR-09`）、暂存区为空（`ERR-07`）、**diff 超过 `maxBuffer`**（提示一次后终止，不静默）
+  - 回退策略：以上均提示一次后终止；其余异常上抛至 `ui/commands` 统一处理
 
 #### 关键行为契约
 
@@ -290,11 +292,11 @@ onInspectCompleted(items):
 
 ### 3.7 S6 Guards & Tests
 
-- **目标**：5 条防腐守卫全绿，核心纯函数被 T1 单测覆盖，契约结构无违规。
+- **目标**：5 条防腐守卫全绿，核心纯函数被 T1 单测覆盖，契约结构无违规；轨迹资产核对——本版已由 S0 登记「未启用 O2 埋点」，本步只需确认无运行期日志代码（`grep -rn "console.log" src/` 须无输出）。
 - **步骤拆解**：
-  1. 落 5 条守卫命令到 `package.json` 的 `scripts`
+  1. 落 `guard`（聚合 5 条守卫）与 `test:unit` 到 `package.json` 的 `scripts`（S0 已落 `compile` / `watch` / `package` / `test`）
   2. 按 `300-design` §7 的 5 个 T1 关注点写单测（纯 Node，不加载 `vscode`）；同表 2 个 T3 场景在 S7 真机验证
-  3. 跑契约结构 lint（若契约资产已拆分）
+  3. 跑契约结构 lint（**无条件必跑**，无需等契约拆分）：`python3 ~/dev/dev-meta/samples/contract-lint/contract_lint.py --root . --contract-file docs/03_CONTRACTS_AND_API.md`
 - **输入输出与前置条件**：
   - 输入：源码与测试
   - 输出：守卫全绿 + 单测全绿
@@ -310,8 +312,10 @@ onInspectCompleted(items):
 - **步骤拆解**：
   1. `npm run compile` + `npx @vscode/vsce package`
   2. 在干净 VS Code 安装 `.vsix`，按 `200-spec` §2 逐项人工验收
-  3. 发布 Marketplace `0.1.0`
-  4. 勾选版本 Issue 的 Step checklist，输出追踪矩阵
+  3. 契约结构 lint 全绿（与 S6 同命令，作为**关版本门禁**）
+  4. 发布 Marketplace `0.1.0`
+  5. 合并回 `main`（**保留完整提交历史，禁止 squash**；优先 `git merge --ff-only`）+ 打 annotated tag `v0.1.0` 并推送
+  6. 勾选版本 Issue 的 Step checklist，输出追踪矩阵
 - **输入输出与前置条件**：
   - 输入：已通过 S6 的分支
   - 输出：Marketplace 上的 `rolligen.sonecheck@0.1.0` + 收口报告
@@ -344,8 +348,8 @@ stateDiagram-v2
   [*] --> Idle
   Idle --> Collecting: 命令触发
   Collecting --> Deciding: diff 解析成功
-  Collecting --> [*]: ERR-06 / ERR-09 环境不可用
-  Collecting --> [*]: ERR-07 无暂存改动
+  Collecting --> Idle: ERR-06 / ERR-09 环境不可用（提示一次后终止）
+  Collecting --> Idle: ERR-07 无暂存改动（提示一次后终止）
   Deciding --> Reporting: 判定与过滤完成
   Reporting --> Idle: 用户关闭
 ```
@@ -363,5 +367,5 @@ stateDiagram-v2
 - **S4**：`GUARD-01`（`core` 无 `vscode` 引用）、`GUARD-02`（配置读取唯一出口）全绿
 - **S5**：`GUARD-05`（清单项可定位）全绿；真机点击跳转成功
 - **S6**：5 条守卫全绿 + T1 全量单测通过 + 契约结构 lint 通过
-- **S7**：真机验收 8 项全过；`.vsix` 已发布
+- **S7**：真机验收 8 项全过；契约结构 lint 全绿；`.vsix` 已发布且 `v0.1.0` annotated tag 已推送
 - **S4 / S5 的顺序与并行说明**：S4 必须先行（S5 依赖 `inspect()` 的返回结构）；S5 内部的 `threshold` 可先于 UI 侧完成并单测
