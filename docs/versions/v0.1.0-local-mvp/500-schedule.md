@@ -23,7 +23,7 @@
 | 2 | v0.1.0-dev-01 | dev | 开发 | **S0 Scaffold & Clean**：TS 工程化、`src/`→`out/` 布局、三层目录与 Facade 骨架、`src/constants.ts` 常量骨架、移除占位命令。详见 `400-build` §3.1 | ★★☆☆☆ | 1.5h | `npm run compile` 零错误，Extension Development Host 能加载扩展 | ✅ |
 | 3 | v0.1.0-dev-02 | dev | 设计 | **S1 Contract & ADR**：ADR-001（TS 迁移）/ ADR-002（mock 判定器）落盘，冻结 `jevClient` 签名，回写 `03` 契约状态。详见 `400-build` §3.2 | ★★☆☆☆ | 1h | ADR 已落盘；`03` 状态标注完成；契约检查通过 | ✅ |
 | 4 | v0.1.0-dev-03 | dev | 开发 | **S2 Core & Prototype**：`parseDiff` / `buildContext` / `scoreHunk` 三个纯函数 + Harness 实测数据（双数据源）。详见 `400-build` §3.3 | ★★★★☆ | 3h | Harness 产出 score 分布与字节数分布；三个纯函数单测通过 | ✅ |
-| 5 | v0.1.0-dev-04 | dev | 开发 | **S3 Standard Finalization**：用实测数据回填 `riskThreshold` / 窗口参数 / payload 上限；契约 `[PLANNED]` → `[CURRENT]`。详见 `400-build` §3.4 | ★★★☆☆ | 1h | `03` 中不再存在无实测依据的阈值 | ⬜ |
+| 5 | v0.1.0-dev-04 | dev | 开发 | **S3 Standard Finalization**：用实测数据回填 `riskThreshold` / 窗口参数 / payload 上限；契约 `[PLANNED]` → `[CURRENT]`。详见 `400-build` §3.4 | ★★★☆☆ | 1h | `03` 中不再存在无实测依据的阈值 | ✅ |
 | 6 | v0.1.0-dev-05 | dev | 开发 | **S4 Ingress Migration**：`git` / `configSource` / `config` / `riskEngine` / `commands` 接线与装配。详见 `400-build` §3.5 | ★★★☆☆ | 2h | 命令可触发，能解析出 hunk 数组，`GUARD-01/02` 全绿 | ⬜ |
 | 7 | v0.1.0-dev-06 | dev | 开发 | **S5 Egress Migration**：`threshold` 过滤与 Top-K、QuickPick 清单、跳转定位、状态栏双态。详见 `400-build` §3.6 | ★★★☆☆ | 2h | 真机点击条目可精准跳转；`GUARD-05` 全绿 | ⬜ |
 | 8 | v0.1.0-dev-07 | dev | 测试 | **S6 Guards & Tests**：5 条防腐守卫 + T1 全量单测 + 契约结构 lint（无条件必跑）。详见 `400-build` §3.7 | ★★★☆☆ | 2h | 守卫全绿、单测全绿、lint 通过 | ⬜ |
@@ -67,3 +67,11 @@
 - **发现**：436 个 hunk 实测 score p50=0.035 / p90=0.20 / max=0.449 —— `CFG-01` 默认阈值 0.85 在 mock 分布下不可达，S3 必须按分布降阈值；payload 越界 0；context 字节 p50=493 / p90=1193
 - **失误**：首版 wire 记账漏算「换行在 JSON 中转义多占 1 字节」，被 diffParser 切分断言捕获后更正
 - **遗留**：`riskThreshold` / `CONTEXT_WINDOW_LINES` / `SCALE_CAP_LINES` 待 S3 按实测回填
+
+#### S3 Standard Finalization（2f39a27）
+
+- **概要**：按 S2 实测把 `riskThreshold` 从预设 0.85 回填为 0.4 并落进 `CFG-01`，完成有证据支撑的契约翻牌，使「判定参数由数据定案」这一条款真正闭环
+- **偏差**：状态翻牌改为**分两批**——S3 只翻有实测 / 单测 / 守卫证据者（`INV-02` / `INV-07` / `API-01` 签名与本地派生 / `CFG-01`），其余兑现项随 S6 全绿后翻牌；已把该规则写进 `03` §5 与 `400-build` S3 步骤
+- **发现**：mock 分布下预设阈值 0.85 不可达（max 0.449）；分离点是规模噪声地板 0.20，取 2.0 倍 → 命中率 1.4%，且「敏感路径命中必 AUDIT」与 `200-spec` §2 的验收场景一致
+- **失误**：无
+- **遗留**：`INV-01` / `INV-05` / `INV-06` / `API-02` / `ERR-06` / `ERR-07` / `ERR-09` 的状态翻牌 → S6
