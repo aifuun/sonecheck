@@ -1,6 +1,6 @@
 # v0.1.0 实现蓝图 — local-mvp
 
-> 结构唯一权威：`docs/02-version-rules.md` §6。
+> 结构唯一权威：`dev-meta/docs/02-version-rules.md` §6。
 > **本文件是唯一承载施工拆分的文档** —— `200-spec` / `300-design` 不得出现 Step 章节。
 > 范围与验收见 `200-spec.md`；架构与算法见 `300-design.md`。
 
@@ -25,7 +25,7 @@
 
 ### 1.2 API 契约
 
-> 契约规范与字段定义见 `docs/06-contract-based-dev.md` §2.1。
+> 契约规范与字段定义见 `dev-meta/docs/06-contract-based-dev.md` §2.1。
 
 - **调用顺序**：`ui/commands` → `core/config.normalize` → `core/riskEngine.inspect` → `infra/git` → `infra/diffParser` → `core/contextBuilder` → `infra/jevClient` → `core/threshold` → `ui/riskList` / `ui/status`
 - **前置条件**：
@@ -291,7 +291,7 @@ onInspectCompleted(items):
 - **目标**：5 条防腐守卫全绿，核心纯函数被 T1 单测覆盖，契约结构无违规。
 - **步骤拆解**：
   1. 落 5 条守卫命令到 `package.json` 的 `scripts`
-  2. 按 `300-design` §7 的 7 个关注点写 T1 单测（纯 Node，不加载 `vscode`）
+  2. 按 `300-design` §7 的 5 个 T1 关注点写单测（纯 Node，不加载 `vscode`）；同表 2 个 T3 场景在 S7 真机验证
   3. 跑契约结构 lint（若契约资产已拆分）
 - **输入输出与前置条件**：
   - 输入：源码与测试

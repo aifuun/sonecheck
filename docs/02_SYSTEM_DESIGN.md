@@ -61,18 +61,21 @@
 | 步骤 | 发起方 | 接收方 | 数据 | 通信方式 |
 |------|--------|--------|------|----------|
 | 1 | 用户 | `ui/commands` | 触发命令 `sonecheck.inspectDiff` | 同步（VS Code 命令） |
-| 2 | `ui/commands` | `core/riskEngine` | 无参调用 `inspect()` | 同步（进程内） |
-| 3 | `core/riskEngine` | `infra/git` | 工作区根路径 | 同步（child_process） |
-| 4 | `infra/git` | `core/riskEngine` | 暂存区 diff 原始文本 | 同步（返回字符串） |
-| 5 | `core/riskEngine` | `infra/diffParser` | diff 文本 | 同步（纯函数） |
-| 6 | `core/riskEngine` | `infra/jevClient` | hunk payload 数组（并发上限 4） | 异步（HTTP，批量并发） |
-| 7 | `core/riskEngine` | `core/threshold` | 判定结果数组 | 同步（纯函数） |
-| 8 | `ui/commands` | `ui/riskList` / `ui/status` | Top-K 风险项 或 空集 | 同步（原生控件） |
-| 9 | `ui/riskList` | VS Code 编辑器 | 打开文件 + 定位行列 | 同步（VS Code API） |
+| 2 | `ui/commands` | `infra/configSource` | 读取原始配置与密钥可用性 | 同步（VS Code API） |
+| 3 | `ui/commands` | `core/config` | 归一为 `SoneCheckConfig` | 同步（纯函数） |
+| 4 | `ui/commands` | `core/riskEngine` | 传入已归一配置，调用 `inspect(config)` | 同步（进程内） |
+| 5 | `core/riskEngine` | `infra/git` | 工作区根路径 | 同步（child_process） |
+| 6 | `infra/git` | `core/riskEngine` | 暂存区 diff 原始文本 | 同步（返回字符串） |
+| 7 | `core/riskEngine` | `infra/diffParser` | diff 文本 | 同步（纯函数） |
+| 8 | `core/riskEngine` | `core/contextBuilder` | 每个 hunk 补上下文行（受 `INV-02` 上限约束） | 同步（纯函数） |
+| 9 | `core/riskEngine` | `infra/jevClient` | hunk payload 数组（并发上限 4） | 异步（HTTP，批量并发） |
+| 10 | `core/riskEngine` | `core/threshold` | 判定结果数组 | 同步（纯函数） |
+| 11 | `ui/commands` | `ui/riskList` / `ui/status` | Top-K 风险项 或 空集 | 同步（原生控件） |
+| 12 | `ui/riskList` | VS Code 编辑器 | 打开文件 + 定位行列 | 同步（VS Code API） |
 
 > **跨模块解耦**：同步用 Facade 调用，异步（判定结果）用 Promise + 一次回传；禁止模块间硬编码互相引用（`dev-meta/docs/09` §3.2）。
 
-**边界说明**：步骤 6 是唯一跨进程边界（网络），也是唯一可能引入秒级延迟的环节；步骤 3/9 是与本机 git / 编辑器的边界，均不得修改工作区内容。
+**边界说明**：步骤 9 是唯一跨进程边界（网络），也是唯一可能引入秒级延迟的环节；步骤 5/12 是与本机 git / 编辑器的边界，均不得修改工作区内容。
 
 ---
 
@@ -81,7 +84,7 @@
 | 状态 / 阶段 | 触发 | 下一状态 | 失败态 |
 |-------------|------|----------|--------|
 | `Idle` | 命令触发 | `Collecting` | — |
-| `Collecting` | git diff 读取完成 | `Deciding` | `Degraded`（无暂存改动 / git 执行失败） |
+| `Collecting` | git diff 读取完成 | `Deciding` | 终止并提示一次（无暂存改动，`ERR-07`）；`Degraded`（git 执行失败） |
 | `Deciding` | 判定全部返回或超时 | `Reporting` | `Degraded`（网络失败 / 超时 / 配额） |
 | `Reporting` | 清单展示完成或用户关闭 | `Idle` | `Degraded` |
 | `Degraded` | 提示用户一次 | `Idle` | — |

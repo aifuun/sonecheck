@@ -50,13 +50,15 @@
 | 7 | 选中条目跳转定位：打开文件 + 光标落到 hunk 起始行（禁止死链） | `INV-06` |
 | 8 | 状态栏双态（检查中 / All Clear），无风险时不弹窗 | `04` §2、US-03 |
 | 9 | 注册命令 `sonecheck.inspectDiff`（命令面板 / 快捷键触发） | `03` §2.2 `API-02` |
-| 10 | S2 Harness 用真实仓库 diff 跑出实测数据，S3 回填契约阈值（`riskThreshold` / payload 上限 / 并发上限） | `02-version-rules` §6.3、Step S3 |
-| 11 | 本版范围的 T1 单测：切块、阈值过滤、Top-K 排序、错误码映射 | `01` §3 |
+| 10 | S2 Harness 用真实仓库 diff 跑出实测数据，S3 回填契约阈值（`riskThreshold` / payload 上限） | `dev-meta/docs/02-version-rules.md` §6.3、Step S3 |
+| 11 | 本版范围的 T1 单测：`300-design` §7 的 5 个纯 Node 关注点（解析 / 截取 / 打分 / 过滤 / 归一） | `01` §3、`300-design` §7 |
 | 12 | 打包 `.vsix` 并发布 Marketplace `0.1.0`（同时达成 M2） | `01` §4 |
 
 **本版不交付**（保持 `[PLANNED]`，归入 `v0.1.1`）
 
-真实 HTTP 客户端与鉴权、降级路径（`ERR-01`~`ERR-05` / `INV-04`）、结构化日志（`observe` + `inspectionId` + 7 个埋点）、`ERR-06`~`ERR-11` 全套、`API-03` 命令、`contextBuilder` 的 2KB 上下文组装、`local_metadata` 三字段。
+真实 HTTP 客户端与鉴权、降级路径（`ERR-01`~`ERR-05` / `INV-04`）、结构化日志（`observe` + `inspectionId` + 7 个埋点）、`ERR-06`~`ERR-11` 中尚未落地的 `ERR-08` / `ERR-10` / `ERR-11`、`API-03` 命令、`local_metadata` 三字段。
+
+> `ERR-06` / `ERR-07` / `ERR-09`、`INV-02` 与 `contextBuilder` 已在 `v0.1.0` 落地（见 §2.1），故不在此列。
 
 ---
 
@@ -71,11 +73,11 @@
 | 1 | 真实判定服务客户端（HTTP + 超时 + 重试 + 错误归一），签名与 mock 一致，切换只改实现 | `02` §2 `infra/jevClient` |
 | 2 | 降级路径：网络不可达 / 超时 / 非 2xx / 配额耗尽 / schema 不合规 → 静默放行 + 一次性提示 | `INV-01`、`INV-04`、`ERR-01`~`ERR-05` |
 | 3 | 结构化日志：`observe` 包装器 + 单次检查单一 `inspectionId` + 7 个埋点全部到位 | `06` §2、§4 |
-| 4 | 错误码全套：非 git 仓库 / 暂存区无改动 / Key 未配置 / git 缺失 / 用户取消 / 空串 | `ERR-06`~`ERR-11`、`03` §4 |
+| 4 | 错误码补全：Key 未配置（`ERR-08`）/ 用户取消（`ERR-10`）/ 空串（`ERR-11`）；`ERR-06` / `ERR-07` / `ERR-09` 已在 `v0.1.0` 落地 | `03` §4 |
 | 5 | 命令 `sonecheck.setApiKey`：Key 写入 SecretStorage，任何情况下不回显明文 | `03` §2.3 `API-03`、`INV-03` |
-| 6 | `contextBuilder`：为每个 hunk 补限长上下文（作用域 + 上限 2KB） | `INV-02`、`02` §2 |
+| 6 | hunk 级并发判定（上限 4），替代 `v0.1.0` 的顺序调用；并发上限经实测后回填 | `02` §3 步骤 9、`02` §4 并发模型 |
 | 7 | `local_metadata` 三字段：`is_exported` / `caller_count` / `touches_sensitive_path` | `03` §2.1 Request |
-| 8 | 契约状态翻牌：本版兑现的 `[PLANNED]` → `[CURRENT]` | `02-version-rules` §4.2 |
+| 8 | 契约状态翻牌：本版兑现的 `[PLANNED]` → `[CURRENT]` | `dev-meta/docs/02-version-rules.md` §4.2 |
 
 ---
 

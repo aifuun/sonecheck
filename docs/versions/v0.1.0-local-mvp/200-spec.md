@@ -1,6 +1,6 @@
 # v0.1.0 特性规格 — local-mvp
 
-> 结构唯一权威：`docs/02-version-rules.md` §4。
+> 结构唯一权威：`dev-meta/docs/02-version-rules.md` §4。
 > ⚠️ 本文件不得出现 `Transaction Flow` / `TF` / `Step` 章节（施工拆分属 `400-build.md`）。
 
 把「提交前挑出最该人工复核的 1–3 块改动」这条链路在本地跑通：抓取暂存区 diff → 切块 → 判定打分 → 按阈值筛出高风险项 → QuickPick 列出 → 点击跳转到对应代码行。
