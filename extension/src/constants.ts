@@ -4,7 +4,7 @@
  *
  * Pure data module: it belongs to no layer, imports nothing, and is read-only
  * for UI / Core / Infra. Never add logic or IO here — `GUARD-03` treats any
- * `0.85` / `2048` literal outside this file as a failure.
+ * `0.4` / `2048` literal outside this file as a failure.
  */
 
 /**
@@ -36,9 +36,15 @@ export const CONTEXT_WINDOW_LINES = 10;
 
 /**
  * Default risk threshold, mirroring `CFG-01` (`sonecheck.riskThreshold`).
- * S3 backfills the final value from S2 Harness data.
+ *
+ * S3 backfill (`300-design` §4.2 / `dev-meta/docs/02-version-rules.md` §6.3):
+ * the S2 Harness saw a size-only noise floor at `0.20` and semantic hits from
+ * `0.40` upward (sensitive path alone = `0.40`), so the threshold sits at
+ * **2.0×** the noise floor — inside the required 1.5–2.5× margin. At this value
+ * 1.4 % of the 436 measured hunks audit, and any sensitive-path change always
+ * does (the acceptance scenario of `200-spec` §2).
  */
-export const RISK_THRESHOLD = 0.85;
+export const RISK_THRESHOLD = 0.4;
 
 /** Default pick-list cap (Top-K), mirroring `CFG-01` (`sonecheck.maxItems`). */
 export const MAX_ITEMS = 3;
