@@ -46,8 +46,9 @@
 
 ## 2. API 接口定义
 
-### 2.1 JevDecision（出站：sonecheck → Jev）
+### 2.1 `API-01` JevDecision（出站：sonecheck → Jev）
 
+- **状态**：`[PLANNED]`
 - **Path**：<!-- TODO: [dm-init-docs] 待确认 Jev 官方 endpoint -->
 - **Method**：`POST`
 - **归属 / 调用方**：`infra/jevClient` / 由 `core/riskEngine` 调用
@@ -77,7 +78,7 @@
 {
   "score": "number   // 0.0 - 1.0 风险分",
   "decision": "AUDIT | PASS",
-  "reason_code": "string  // 触发原因分类，见 §4 错误码表的 reason 域"
+  "reason_code": "string  // 触发原因分类，取值见 §2.4"
 }
 ```
 
@@ -89,21 +90,22 @@
 | `ERR-02` | 请求超时 | 同上 | 否（一次性提示） |
 | `ERR-03` | 非 2xx 响应 | 同上，日志记录状态码 | 否（一次性提示） |
 | `ERR-04` | 配额耗尽 / 鉴权失败 | 同上，提示用户检查 API Key | 否（一次性提示） |
-| `ERR-05` | 响应 schema 不合规（缺字段 / 越界） | 该块丢弃不计入清单 | 否（写入日志） |
+| `ERR-05` | 响应 schema 不合规（缺字段 / 越界 / `reason_code` 不在枚举内） | 该块丢弃不计入清单 | 否（写入日志） |
 
 > **严禁静默吞错**：纯函数式失败返回空 / 原值而非 nil；危险失败不得静默，须调用前拦截并显式暴露（`dev-meta/docs/06` §5）。
 
 ---
 
-### 2.2 命令 `sonecheck.inspectDiff`（VS Code 命令契约）
+### 2.2 `API-02` 命令 `sonecheck.inspectDiff`（VS Code 命令契约）
 
+- **状态**：`[PLANNED]`
 - **Path**：VS Code 命令 ID `sonecheck.inspectDiff`
 - **Method**：命令调用（无参）
 - **归属 / 调用方**：`ui/commands` / 由用户经命令面板、快捷键或状态栏触发
 - **幂等性**：幂等；检查进行中重复触发复用进行中的 Promise，不另起流程（`02` §4）
 - **返回语义**：无返回值；结果经 UI 呈现。**失败一律以放行收尾**（INV-01）
 
-**Request**：无参（配置经 `workspace.getConfiguration("sonecheck")` 读取）
+**Request**：无参（配置经 `workspace.getConfiguration("sonecheck")` 读取，见 §3 `CFG-01`）
 
 **Response**：无返回值（副作用为 UI 呈现）
 
@@ -118,13 +120,14 @@
 
 ---
 
-### 2.3 命令 `sonecheck.setApiKey`（VS Code 命令契约）
+### 2.3 `API-03` 命令 `sonecheck.setApiKey`（VS Code 命令契约）
 
+- **状态**：`[PLANNED]`
 - **Path**：VS Code 命令 ID `sonecheck.setApiKey`
 - **Method**：命令调用（无参）
 - **归属 / 调用方**：`ui/commands` / 由用户手动触发
 - **幂等性**：幂等（以最后一次写入为准）
-- **返回语义**：Key 写入 SecretStorage；**任何情况下不得回显 Key 明文**（INV-03）
+- **返回语义**：Key 写入 SecretStorage（见 §3 `CFG-01`）；**任何情况下不得回显 Key 明文**（INV-03）
 
 **失败面（Failure Face）**
 
@@ -135,7 +138,29 @@
 
 ---
 
+### 2.4 `reason_code` 取值枚举（`API-01` Response 字段）
+
+> `reason_code` 是 `API-01` Response 的分类字段，供 UI 展示（`04` §1 的清单条目）与用户判断依据。
+> **不在本表枚举内的取值视为 schema 不合规**，按 `ERR-05` 丢弃该块。
+
+| 取值 | 含义 | 典型触发场景 |
+|------|------|--------------|
+| `AUTH_BOUNDARY` | 鉴权 / 权限边界变更 | Token 校验、角色判断、Session 逻辑、权限注解 |
+| `DATA_WRITE` | 数据写入 / 事务变更 | INSERT / UPDATE / DELETE、事务边界、金额字段 |
+| `CONTRACT_BREAK` | 对外接口或 Schema 破坏性变更 | 函数签名、REST / RPC 字段、数据表结构变更 |
+| `ERROR_HANDLING` | 异常处理 / 重试逻辑变更 | 删除 try-catch、改重试退避、吞掉错误 |
+| `CONFIG_CHANGE` | 配置或密钥相关变更 | 环境变量、超时值、连接池、密钥读取方式 |
+| `HIGH_FANOUT` | 高引用数符号变更 | 导出函数 / 公共类型被多个调用方引用 |
+| `STYLE_ONLY` | 纯样式 / 注释 / 格式化 | 空行、引号、注释、文档字符串（预期得低分） |
+
+- **单值返回**：一个 hunk 命中多个维度时，返回**影响面最大**的一个；`reason_code` 不支持多值。
+- **新增取值**属纯增量：须在本表登记并回写编号（见 §5）。
+
+---
+
 ## 3. 存储 Schema
+
+**`CFG-01` 配置项与密钥存储**（状态 `[PLANNED]`）
 
 | 实体 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|------|
@@ -170,7 +195,7 @@
 ## 5. 契约演进治理
 
 - **破坏性变更**（改语义 / 签名 / 坐标口径）：须走 `dm-adr` 记录并同步调用方，**不得静默修改**。
-- **纯增量追加**：标注「纯增量」并回写编号至本表。
+- **纯增量追加**：标注「纯增量」并回写编号至本表（如 §2.4 新增 `reason_code` 取值）。
 - **状态翻牌**：`[PLANNED]` → `[CURRENT]`（S3 实测数据回填后）；被取代 / 废弃 → 标 `[HISTORY]` 并迁归档，索引保留一行 + 归档指针，**不删除**（`dev-meta/docs/06` §4.2 / §6.5）。
 - **引用单向**：本文**只被引用，不引用下游**（版本文档 / 计划 / 上层规格）；消费方在**自己文档内**声明引用（`dev-meta/docs/06` §7.1）。
 - **只读纪律**：AI 严禁自行改写契约本身；改实现前先 diff 契约（见 `dev-meta/docs/06` §8 与 `dm-contract-gate`）。
@@ -243,13 +268,13 @@ docs/
 
 > 本项目已定域表：`INV`（业务不可变式）、`API`（命令与出站接口）、`CFG`（配置与密钥）、`ERR`（失败面）、`OBS`（观测）。完整参考与硬规则见 `dev-meta/docs/06` **§6.3**。
 
-| 域 | 管什么 | 示例 ID |
-|----|--------|---------|
-| `INV` | 业务不可变式 | `INV-01` |
-| `API` | 接口签名 / 错误码 / 兼容性 | `API-01` |
+| 域 | 管什么 | 本项目已用编号 |
+|----|--------|----------------|
+| `INV` | 业务不可变式 | `INV-01` ~ `INV-07` |
+| `API` | 接口签名 / 错误码 / 兼容性 | `API-01` ~ `API-03` |
 | `CFG` | 配置项与密钥存储 | `CFG-01` |
-| `ERR` | 失败面（跨模块） | `ERR-01` |
-| `OBS` | 观测 / 日志 | `OBS-01` |
+| `ERR` | 失败面（跨模块） | `ERR-01` ~ `ERR-11` |
+| `OBS` | 观测 / 日志 | 暂无（实例化见 `06_OBSERVABILITY.md`） |
 
 - **硬规则**：全大写、无连字符无数字、**2–8 字符**、**一词一域**、**登记后不改名**（改名＝引用断，要拆就新立域 + 旧域归档）、不得占用 `S0–S7` / `GUARD-xx` / `L1–L3` 保留空间。
 - **域选取**：按归属模块（改它时最先要跟着改的是谁）；跨模块关注点（错误 / 观测 / 并发 / 内存）**独立成域**；**一条契约只落一个域**。

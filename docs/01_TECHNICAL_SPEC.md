@@ -11,7 +11,7 @@
 | 层面 | 选型 | 版本 | 选型理由 / 决策记录 |
 |------|------|------|---------------------|
 | 语言 / 运行时 | TypeScript + Node.js | Node 22.x（VS Code 内置运行时） | 与 VS Code Extension API 同源，零额外分发成本 |
-| 框架 | VS Code Extension API（无 Webview 框架） | VS Code 稳定版 | 原生 QuickPick / 状态栏足以覆盖 v0.0.1 交互，避免 Webview 调试开销 |
+| 框架 | VS Code Extension API（无 Webview 框架） | VS Code 稳定版 | 原生 QuickPick / 状态栏足以覆盖 v0.1.0 交互，避免 Webview 调试开销 |
 | 存储 | VS Code `SecretStorage`（Key）+ `workspace.getConfiguration`（阈值、开关） | — | Key 不落盘明文；配置跟随用户设置同步 |
 | 第三方服务 | Jev Decision API（TypeSafe AI） | <!-- TODO: [dm-init-docs] API 版本与 endpoint --> | System-1 结构化判定，输出免费、延迟量级为亚秒级；是本产品的成本与速度前提，实际延迟须经 M1 实测回填 |
 | 构建 / 打包 | `@vscode/vsce` → `.vsix` | <!-- TODO --> | 官方打包链，支持 GitHub Release 与 Marketplace 双通道 |
@@ -29,7 +29,7 @@
 | 资源上限 | 单次检查端到端 p95 ≤ 1s；单块判定 ≤ 500ms；上传 payload 单块 ≤ 2KB；检查期间不得阻塞 UI 线程 | 00 §3 性能 |
 | 依赖限制 | 禁止上传全量源文件；禁止在日志 / 遥测中出现 API Key 与源码明文；禁止以任何形式修改用户工作区文件（只读） | 00 §3 安全、契约 INV-02 / INV-03 / INV-05 |
 | 网络 | 无网络 / Jev 不可用时必须降级放行，不阻断提交 | 00 §3 可用性 |
-| 隐私 | v0.0.1 采用 BYOK（用户自备 Jev API Key），不引入服务端中转 | 00 §5 非目标 |
+| 隐私 | v0.1.0 采用 BYOK（用户自备 Jev API Key），不引入服务端中转 | 00 §5 非目标 |
 
 ---
 
@@ -60,7 +60,7 @@
 | 发布方式 | 双通道：① GitHub Release 附带 `.vsix`；② VS Code Marketplace 发布（Publisher ID 待注册） |
 | 回滚方式 | Marketplace 侧发布新版本覆盖；GitHub 侧删除 Release 资产或回退 tag |
 | 配置与密钥 | Jev API Key 经 VS Code SecretStorage 存储；阈值 / 开关经 `workspace.getConfiguration("sonecheck")`；仓库内**禁止**出现任何真实 Key |
-| npm 占位包 | `sonecheck@0.0.1` 独立发布（`publishConfig.access: public`），与插件版本解耦 |
+| npm 占位包 | `sonecheck` 占位包已发布（`publishConfig.access: public`）；**与扩展共用同一 `package.json`**，故版本号与扩展同源，拆包前不得为扩展单独发版（详见 `05` §2） |
 
 ---
 

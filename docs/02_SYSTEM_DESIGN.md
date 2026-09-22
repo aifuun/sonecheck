@@ -9,7 +9,7 @@
 ## 1. 总体架构
 
 ```
-[ VS Code UI 层 ]  commands / QuickPick / 状态栏 / 诊断
+[ VS Code UI 层 ]  commands / QuickPick / 状态栏 / 通知
           │  只依赖 core 的 Facade
           ▼
 [ Core 决策层 ]  riskEngine：切块编排 → 上下文组装 → 并发判定 → 阈值过滤 → Top-K
@@ -42,7 +42,8 @@
 | `src/core/riskEngine.ts` | 主流程：切块 → 组装 payload → 并发判定 → 过滤 → Top-K | `inspect()` | 私有 |
 | `src/core/contextBuilder.ts` | 为每个 hunk 补上下文行，控制 payload ≤ 2KB | `buildContext()` | 私有 |
 | `src/core/threshold.ts` | 阈值判定与排序（RISK_THRESHOLD 常量，禁魔数） | `filterRisky()` | 私有 |
-| `src/core/config.ts` | 读取阈值 / 开关 / 密钥可用性 | `getConfig()` | 私有 |
+| `src/core/config.ts` | 配置模型与校验：校验阈值范围、归一默认值（纯逻辑，**不接触 VS Code API**） | `normalizeConfig()` | 私有 |
+| `src/infra/configSource.ts` | 从 `workspace.getConfiguration` 与 SecretStorage 读取原始配置 / 密钥可用性（唯一接触 VS Code 配置 API 的出口） | `readRawConfig()` / `hasApiKey()` | 私有 |
 | `src/infra/git.ts` | 取工作区根、执行 `git diff --staged` | `readStagedDiff()` | 私有 |
 | `src/infra/diffParser.ts` | diff 文本 → hunk 数组（文件、起始行、内容） | `parseDiff()` | 私有 |
 | `src/infra/jevClient.ts` | Jev 决策请求（超时、重试、错误归一） | `decide()` | 私有 |

@@ -86,8 +86,8 @@
 - **落地位置**：`src/infra/logger.ts`（导出 `observe<T>(stage, fn, fields)` 与 `log(event)`）。
 - **输出目标**：VS Code **Output Channel**（`sonecheck`），单行 JSON，便于直接贴给 AI 排查。
 - **生产隔离方式**：由 `sonecheck.debug` 配置在**激活时读取一次**决定是否输出详细字段；错误与降级路径**始终输出**（不依赖开关）。
-- **`observe` 幂等一次**：同一次检查使用同一 `inspectionId`（时间戳 + 随机短串），所有日志行携带该 ID，便于串联一次完整链路 —— 无 `inspectionId` 的日志视为违规。
-- **Python 参考模板不适用**：本项目为 TypeScript/Node 环境，包装器形态以 `dev-meta 07 §4` 的 JS/TS 模板为准。
+- **单次检查单一 `inspectionId`**：同一次检查的所有日志行携带同一 ID（时间戳 + 随机短串），便于串联完整链路 —— 无 `inspectionId` 的日志视为违规。
+- **模板选择**：本项目为 TypeScript/Node 环境，包装器形态以 `dev-meta 07 §4` 的 JS/TS 模板为准。
 - **历史散落 `console.log` 盘点**：0（项目尚未开始编码）。**首条红线**：此后新增代码禁止裸 `console.log`，一律经 `observe` / `log`。
 
 ---
@@ -112,8 +112,8 @@
 
 | 阶段 | 目标 | 状态 |
 |------|------|------|
-| 起步（v0.0.1） | Output Channel 结构化单行 JSON + `inspectionId` 串联；O1 覆盖切块与阈值纯函数 | ⬜ |
-| 增强（v0.1.0） | 判定质量指标（命中率 / 误报反馈计数）落盘可选；payload 字节数分布统计 | ⬜ |
+| 起步（v0.1.0） | Output Channel 结构化单行 JSON + `inspectionId` 串联；O1 覆盖切块与阈值纯函数 | ⬜ |
+| 增强（v0.2.0） | 判定质量指标（命中率 / 误报反馈计数）落盘可选；payload 字节数分布统计 | ⬜ |
 | 团队化（v1.0.0） | 审计日志可导出（团队规则命中记录）；错误上报去标识化 | ⬜ |
 
 ---
