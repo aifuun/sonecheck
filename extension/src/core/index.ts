@@ -1,8 +1,15 @@
 /**
  * Core Facade — the only entry the UI layer may import (`02` §1 Facade discipline).
  *
- * S2 exports the pure context builder; `riskEngine`, `threshold` and `config`
- * follow in S4/S5. Internal implementations stay private.
+ * Exposes the risk engine, the pure helpers and the shared core types; internal
+ * implementations stay private.
  */
 
-export { buildContext, contextBudgetBytes } from './contextBuilder';
+export { contextBudgetBytes, buildContext } from './contextBuilder';
+export { normalizeConfig } from './config';
+export { filterRisky } from './threshold';
+export { createRiskEngine } from './riskEngine';
+
+export type { RawConfigInput, SoneCheckConfig } from './config';
+export type { RiskItem, ScoredHunk } from './threshold';
+export type { RiskEngine, RiskEngineDeps } from './riskEngine';

@@ -36,7 +36,43 @@
         "command": "sonecheck.inspectDiff",
         "title": "SoneCheck: Inspect Staged Diff"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "SoneCheck",
+      "properties": {
+        "sonecheck.riskThreshold": {
+          "type": "number",
+          "default": 0.4,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Risk score at or above which a hunk is listed for manual review (exclusive bounds 0 and 1)."
+        },
+        "sonecheck.maxItems": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Maximum number of risky hunks shown in the pick list (Top-K)."
+        },
+        "sonecheck.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Global switch for the SoneCheck inspection."
+        },
+        "sonecheck.sensitivePathPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "auth",
+            "payment",
+            "migration"
+          ],
+          "description": "Path substrings treated as sensitive; a match counts as an auth-boundary risk."
+        }
+      }
+    }
   },
   "scripts": {
     "compile": "tsc -p ./",

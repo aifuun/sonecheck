@@ -1,17 +1,32 @@
 import type * as vscode from 'vscode';
 
+import { createRiskEngine } from './core';
+import {
+  createMockJevClient,
+  readSourceLines,
+  readStagedDiff,
+  resolveRepoRoot,
+} from './infra';
+import { registerCommands } from './ui/commands';
+
 /**
  * SoneCheck — extension entry point (assembly layer, `02` §2 `src/extension.ts`).
  *
- * S0: shell only. This file owns dependency assembly and nothing else: the
- * command handler is registered by `src/ui/commands.ts` and wired in here from
- * S4 on (see `400-build.md` §3.5). No business logic may live in this file.
+ * The only job of this file is wiring: it binds the infra capabilities to the
+ * core engine and registers the UI commands. `v0.1.1` swaps the decision client
+ * here (from the local mock to the HTTP one) without touching any caller.
  */
+export function activate(context: vscode.ExtensionContext): void {
+  const engine = createRiskEngine({
+    resolveRepoRoot,
+    readStagedDiff,
+    readSourceLines,
+    createClient: createMockJevClient,
+  });
 
-export function activate(_context: vscode.ExtensionContext): void {
-  // TODO(S4): _context.subscriptions.push(registerCommands())
+  context.subscriptions.push(...registerCommands(engine));
 }
 
 export function deactivate(): void {
-  // Nothing to dispose yet: all subscriptions are owned by the activation context.
+  // Nothing to dispose: every subscription is owned by the activation context.
 }
