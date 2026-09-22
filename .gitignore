@@ -51,6 +51,9 @@ web_modules/
 # Optional npm cache directory
 .npm
 
+# Local npm credentials — `npm login` writes an auth token here; never commit
+.npmrc
+
 # Optional eslint cache
 .eslintcache
 
@@ -134,3 +137,9 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Private planning notes, kept local by choice.
+# NOTE: docs/00~06 remain tracked — contract 03 is the code SSOT and must stay
+# in the same repo as the code.
+# See docs/private/README.md
+/docs/private/
