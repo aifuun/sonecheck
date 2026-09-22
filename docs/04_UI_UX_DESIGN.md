@@ -33,7 +33,7 @@
 | 状态栏（`ui/status`） | 无暂存改动：显示 `SoneCheck: 无改动` 后恢复 | 显示 `SoneCheck: 检查中…`（spinner） | 显示 `All Clear` 2s 后恢复 | `ERR-06/09`：显示一次错误并恢复 | `ERR-01~04`：显示 `SoneCheck: 已跳过（服务不可用）` |
 | QuickPick 清单（`ui/riskList`） | **不弹出**（零打扰，US-03） | 不适用（清单仅在判定完成后弹出） | 列出 Top-K 风险项，可键盘选择 | `ERR-05`：不合规项被丢弃，剩余项照常展示 | 同「空」：降级时不弹出清单 |
 | 密钥输入框（`ui/commands`） | `ERR-10` 取消：无操作 | 不适用 | 写入成功并提示「已保存」 | `ERR-11` 空串：二次确认后清除 | 不适用 |
-| 输出通道（`06_OBSERVABILITY.md`） | 无日志时保持空白 | 实时追加 | 结构化日志可读 | 记录 `ERR-*` 原因码 | 记录降级原因与耗时 |
+| 输出通道（`ui/logger` → Output Channel） | 无日志时保持空白 | 实时追加 | 结构化日志可读 | 记录 `ERR-*` 原因码 | 记录降级原因与耗时 |
 
 > 错误与降级态须有可观测留痕，判据见 `06_OBSERVABILITY.md`。
 
@@ -119,6 +119,6 @@
 | `02_SYSTEM_DESIGN.md` | upstream | 检查状态机（§4）—— 本文 §5 检查项 4 的判据 |
 | `03_CONTRACTS_AND_API.md` | upstream | 接口契约与错误码 |
 | `06_OBSERVABILITY.md` | 关联 | 错误 / 降级留痕落点 |
-| `dev-meta/docs/09-ai-architecture-guide.md` §7 | upstream | 设计令牌规范与准入线（只引用） |
+| `dev-meta/docs/09-ai-architecture-guide.md` §7 | 外部权威 | 设计令牌规范与准入线（只引用，不重定义） |
 
 > 方向取值：`upstream`（本文引用它）/ `外部权威`（只引用不重定义）/ `关联`（无层级关系的互补文档）。
