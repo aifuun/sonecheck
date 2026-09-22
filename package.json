@@ -1,16 +1,21 @@
 {
   "name": "sonecheck",
   "version": "0.0.1",
-  "description": "100ms System-1 AI code risk inspector for VS Code and Git hooks. Name-reservation release; the first functional release is 0.1.0.",
+  "description": "Sub-second System-1 AI code risk inspector for VS Code and Git hooks. Name-reservation release; the first functional release is 0.1.0.",
   "keywords": [
     "vscode",
     "vscode-extension",
     "git-diff",
+    "diff",
+    "git-hooks",
+    "pre-commit",
     "code-review",
+    "code-quality",
     "static-analysis",
     "risk-analysis",
-    "developer-tools",
-    "system-1"
+    "jev",
+    "system-1",
+    "developer-tools"
   ],
   "license": "MIT",
   "author": "aifuun",
