@@ -10,7 +10,7 @@
 
 | 层面 | 选型 | 版本 | 选型理由 / 决策记录 |
 |------|------|------|---------------------|
-| 语言 / 运行时 | TypeScript + Node.js | Node 22.x（VS Code 内置运行时） | 与 VS Code Extension API 同源，零额外分发成本 |
+| 语言 / 运行时 | TypeScript + Node.js | TypeScript `~5.7.0`；Node 22.x（VS Code 内置运行时，`@types/node` 固定 `^22.0.0`） | 与 VS Code Extension API 同源，零额外分发成本；**类型定义大版本必须与运行时一致**——`@types/node` 用更高大版本会允许调用宿主不存在的 API，编译通过但运行期失败 |
 | 框架 | VS Code Extension API（无 Webview 框架） | VS Code 稳定版 | 原生 QuickPick / 状态栏足以覆盖 v0.1.0 交互，避免 Webview 调试开销 |
 | 存储 | VS Code `SecretStorage`（Key）+ `workspace.getConfiguration`（阈值、开关） | — | Key 不落盘明文；配置跟随用户设置同步 |
 | 第三方服务 | Jev Decision API（TypeSafe AI） | `POST https://api.typesafe.ai/v1/systemone`；`model: "jev-latest"`（官方文档 `https://docs.typesafe.ai/api`） | System-1 结构化判定（`noul` / `choice` / `score` 三原语），输出免费、延迟量级为亚秒级；是本产品的成本与速度前提，实际延迟须经 M1 实测回填。契约见 `03` §2.1 |
@@ -25,11 +25,12 @@
 
 | 约束类型 | 内容 | 来源 |
 |----------|------|------|
-| 平台 / 环境 | 目标平台 VS Code 稳定版（最低版本待定）；宿主为扩展宿主进程（Extension Host）；必须在 macOS / Windows / Linux 三端可用 | 00 §3 兼容性 |
+| 平台 / 环境 | 目标平台 VS Code 稳定版（最低 `^1.90.0`，以 `extension/package.json` 的 `engines.vscode` 为准）；宿主为扩展宿主进程（Extension Host）；必须在 macOS / Windows / Linux 三端可用 | 00 §3 兼容性 |
 | 资源上限 | 单次检查端到端 p95 ≤ 1s；单块判定 ≤ 500ms；上传 payload 单块 ≤ 2KB；检查期间不得阻塞 UI 线程 | 00 §3 性能 |
 | 依赖限制 | 禁止上传全量源文件；禁止在日志 / 遥测中出现 API Key 与源码明文；禁止以任何形式修改用户工作区文件（只读） | 00 §3 安全、契约 INV-02 / INV-03 / INV-05 |
 | 网络 | 无网络 / Jev 不可用时必须降级放行，不阻断提交 | 00 §3 可用性 |
 | 隐私 | v0.1.0 采用 BYOK（用户自备 Jev API Key），不引入服务端中转 | 00 §5 非目标 |
+| 依赖版本对齐 | `@types/node` 大版本必须等于扩展宿主内置的 Node 运行时大版本（当前 `^22.0.0`）；TypeScript 锁 5.x 稳定代际（`~5.7.0`） | 工程基线（宿主为 Extension Host + Node 22.x） |
 
 ---
 

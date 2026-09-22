@@ -89,7 +89,7 @@
   1. 删除 `extension.js`；新建 `src/extension.ts`（仅 `activate` / `deactivate` 空壳）
   2. 新建 `src/ui/` `src/core/` `src/infra/` 三个目录与 `core/index.ts`、`infra/index.ts` 两个 Facade（先只放类型导出）
   3. 新增 `tsconfig.json`：`target: ES2022`、`module: commonjs`、`rootDir: ./src`、`outDir: ./out`、`strict: true`、`sourceMap: true`
-  4. `package.json`：`main` 改 `./out/extension.js`；`contributes.commands` 从 `sonecheck.showStatus` 换为 `sonecheck.inspectDiff`；新增 `scripts`（`compile` / `watch` / `package`）；新增 `devDependencies`（`typescript` / `@types/vscode` / `@types/node` / `@vscode/vsce`）
+  4. `package.json`：`main` 改 `./out/extension.js`；`contributes.commands` 从 `sonecheck.showStatus` 换为 `sonecheck.inspectDiff`；新增 `scripts`（`compile` / `watch` / `package`）；新增 `devDependencies`（`typescript ~5.7.0` / `@types/node ^22.0.0` / `@types/vscode` / `@vscode/vsce ^4.0` / `vitest ^5.0` / `msw ^2.15`）——**`@types/node` 必须锁 22.x 与宿主运行时对齐，禁止跟随 npm 最新大版本**
   5. `.vscodeignore` 增加 `src/`、`test/`、`tsconfig.json`、`**/*.map`
 - **函数签名与伪代码**：
 

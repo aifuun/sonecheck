@@ -44,6 +44,7 @@
 | 错误域边界 | 本地失败只落 `ERR-06`（非 git 仓库）/ `ERR-07`（无暂存改动）/ `ERR-09`（git 缺失）；`core` 不做 `try-catch`，异常沿调用链上抛至 `ui/commands` 统一提示一次后终止；**不静默吞错** |
 | 模块物理路径 | `src/{ui,core,infra}` → tsc 编译 → `out/{ui,core,infra}`；入口 `src/extension.ts` → `out/extension.js` |
 | 工程登记 | `package.json` 的 `main` 改为 `./out/extension.js`；`.vscodeignore` 排除 `src/`、`test/`、`tsconfig.json`、`**/*.map` |
+| **依赖版本基线（硬约束）** | `@types/node` 固定 **`^22.0.0`**——必须与扩展宿主内置的 Node 22.x 运行时**大版本一致**；用更高大版本会允许调用宿主不存在的 API（如新版 `fs` / `util` 静态方法），导致「编译通过、运行期 `TypeError`」。`typescript` 锁定 **`~5.7.0`**——5.x 稳定代际，避免 TS 7.x 与 `@types/vscode` 及官方构建链的兼容性风险 |
 
 ---
 
