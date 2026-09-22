@@ -57,10 +57,11 @@
 |----|------|
 | 目标环境 | 开发者本机 VS Code（开发态：Extension Development Host） |
 | 构建命令 | `npm run compile`（tsc）+ `npx @vscode/vsce package` |
-| 发布方式 | 双通道：① GitHub Release 附带 `.vsix`；② VS Code Marketplace 发布（Publisher ID 待注册） |
+| 发布方式 | 双通道：① GitHub Release 附带 `.vsix`；② VS Code Marketplace 发布（Publisher `rolligen`，清单见 `extension/package.json`） |
 | 回滚方式 | Marketplace 侧发布新版本覆盖；GitHub 侧删除 Release 资产或回退 tag |
 | 配置与密钥 | Jev API Key 经 VS Code SecretStorage 存储；阈值 / 开关经 `workspace.getConfiguration("sonecheck")`；仓库内**禁止**出现任何真实 Key |
-| npm 占位包 | `sonecheck` 占位包已发布（`publishConfig.access: public`）；**与扩展共用同一 `package.json`**，故版本号与扩展同源，拆包前不得为扩展单独发版（详见 `05` §2） |
+| npm 占位包 | 仓库根的 `sonecheck` 占位包已发布（`publishConfig.access: public`），**冻结于 `0.0.x`**，不再演进 |
+| VS Code 扩展 | 位于 `extension/`，持有独立 `package.json`（`publisher: rolligen`）；版本独立编号，自 `0.0.1` 起，`v0.1.0` 为 MVP 主线（详见 `05` §2） |
 
 ---
 
