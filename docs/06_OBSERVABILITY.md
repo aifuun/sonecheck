@@ -6,7 +6,7 @@
 > 本文**只补充 dev-meta 07 无法覆盖的本项目的专属内容**，不重定义任何 ODD 原则。
 > ⚠️ 若本文与 dev-meta 07 冲突，**以 dev-meta 07 为准**并回来修正本文。
 >
-> **文档流向纪律**：本文档继承引用 upstream `02_SYSTEM_DESIGN.md`（关键路径）与 `03_CONTRACTS_AND_API.md`（失败面 / 错误码）；被 `05_ROADMAP_AND_COMPLIANCE.md` 引用（审计留痕）。
+> **文档流向纪律**：本文档继承引用 upstream `02_SYSTEM_DESIGN.md`（关键路径）与 `03_CONTRACTS_AND_API.md`（失败面 / 错误码）；**不引用下游，也不声明下游引用方**（引用方向严格单向）。
 > **占位符约定**：`{{FIELD}}` = 结构化命名字段；`<!-- TODO: [dm-init-docs] <说明> -->` = 待补充内容。
 
 ---
@@ -41,7 +41,7 @@
 
 ## §2 关键路径埋点清单
 
-> 与 `02_SYSTEM_DESIGN.md` §5「须被观测的关键路径」一一对应。
+> 本节是 `02_SYSTEM_DESIGN.md` §5「须被观测的关键路径」的**细化**：在 `02` 的 5 条路径基础上新增 `infra/diffParser` 与 `core/contextBuilder` 两个观测点（二者开销低，但其判别量是 §5 DoD「轨迹可判别」的直接依据），并把 `02` 的「降级路径」落到具体函数 `ui/status.reportStatus`。
 
 | 阶段 / 函数 | 层 | 须含字段 | 判别量（标量 / 计数 / 布尔） | 是否高开销 | 状态 |
 |-------------|----|----------|---------------------------|-----------|------|
@@ -126,4 +126,3 @@
 | `dev-meta/docs/07-observability-driven-dev.md` | **外部权威** | ODD 规范（只引用，不重定义） |
 | `02_SYSTEM_DESIGN.md` | upstream | 关键路径与架构 |
 | `03_CONTRACTS_AND_API.md` | upstream | 失败面与错误码 |
-| `05_ROADMAP_AND_COMPLIANCE.md` | downstream | 审计与合规留痕 |

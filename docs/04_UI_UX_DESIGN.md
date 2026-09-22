@@ -2,7 +2,7 @@
 
 > **适用说明**：本文为**可选文档**。纯后端 / CLI / 库类项目**自动跳过**，不生成。
 > 本项目为 VS Code 扩展（有用户界面），故生成；界面**全部由 VS Code 原生控件构成**（QuickPick / 通知 / 状态栏），无 Webview、无自定义视觉层。
-> **文档流向纪律**：本文档继承引用 upstream `00_PRODUCT_REQUIREMENTS.md` 与 `03_CONTRACTS_AND_API.md`；被 `05` 引用，**不反向引用上游以外的内容**。
+> **文档流向纪律**：本文档继承引用 upstream `00_PRODUCT_REQUIREMENTS.md`、`02_SYSTEM_DESIGN.md` 与 `03_CONTRACTS_AND_API.md`；**不引用下游，也不声明下游引用方**（引用方向严格单向）。
 > **占位符约定**：`{{FIELD}}` = 结构化命名字段；`<!-- TODO: [dm-init-docs] <说明> -->` = 待补充内容。
 
 ---
@@ -102,7 +102,7 @@
 | 1 | 未硬编码任何颜色 / 字号字面量，主题色一律经 `ThemeColor` | 本文 §3.1 红线 | ✅ 正则扫描 |
 | 2 | 视图覆盖**空 / 加载 / 成功 / 错误 / 降级**五态 | 本文 §2 | 🟡 人工对照 |
 | 3 | 错误与降级态**有留痕**，无静默吞错 | `dev-meta/docs/07-observability-driven-dev.md` §2.5 | 🟡 人工 / 日志检查 |
-| 4 | UI 不自持业务状态（检查状态机归 `core`） | `dev-meta/docs/09-ai-architecture-guide.md` §3.4 | 🟡 人工 Review |
+| 4 | UI 不自持业务状态（检查状态机归 `core`） | `02` §4（状态机定义）+ `dev-meta/docs/09-ai-architecture-guide.md` §3.4 | 🟡 人工 Review |
 | 5 | 对比度 / 动态字号 / 无障碍标签达标 | WCAG 2.2 AA | ✅ 原生控件 + 人工抽查 |
 | 6 | 无常驻动画；若有须支持 `prefers-reduced-motion` | WCAG 2.2 AA | ✅ 代码扫描 |
 | 7 | **禁跨层取数**：UI 不得直接调 git / HTTP（只经 `core` Facade） | `dev-meta/docs/09-ai-architecture-guide.md` §2 单向分层 | 🟡 人工 Review |
@@ -116,7 +116,9 @@
 | 引用对象 | 方向 | 用途 |
 |----------|------|------|
 | `00_PRODUCT_REQUIREMENTS.md` | upstream | 用户故事与验收 |
+| `02_SYSTEM_DESIGN.md` | upstream | 检查状态机（§4）—— 本文 §5 检查项 4 的判据 |
 | `03_CONTRACTS_AND_API.md` | upstream | 接口契约与错误码 |
-| `06_OBSERVABILITY.md` | 平级 | 错误 / 降级留痕 |
-| `05_ROADMAP_AND_COMPLIANCE.md` | downstream | 版本归属 |
+| `06_OBSERVABILITY.md` | 关联 | 错误 / 降级留痕落点 |
 | `dev-meta/docs/09-ai-architecture-guide.md` §7 | upstream | 设计令牌规范与准入线（只引用） |
+
+> 方向取值：`upstream` / `外部权威` / `关联`（同 `01` §5）。

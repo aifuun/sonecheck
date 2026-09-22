@@ -1,6 +1,6 @@
 # sonecheck - 系统设计
 
-> **文档流向纪律**：本文档继承引用 upstream `00_PRODUCT_REQUIREMENTS.md`、`01_TECHNICAL_SPEC.md`，并被 `03`、`04`、`05`、`06` 引用；**不反向引用下游**。
+> **文档流向纪律**：本文档继承引用 upstream `00_PRODUCT_REQUIREMENTS.md`、`01_TECHNICAL_SPEC.md`；**不引用下游，也不声明下游引用方**（引用方向严格单向）。
 > **占位符约定**：`{{FIELD}}` = 结构化命名字段；`<!-- TODO: [dm-init-docs] <说明> -->` = 待补充内容。
 > **权威引用**：可观测性规范见 `dev-meta/docs/07`（唯一权威），本文**只放指针**，详细实例化在 `06_OBSERVABILITY.md`；架构设计原则见 `dev-meta/docs/09`。
 
@@ -117,5 +117,3 @@
 | `01_TECHNICAL_SPEC.md` | upstream | 技术选型与约束 |
 | `dev-meta/docs/07` | 外部权威 | 可观测性规范（只引用） |
 | `dev-meta/docs/09` | 外部权威 | 架构设计原则（只引用） |
-| `03_CONTRACTS_AND_API.md` | downstream | 契约定义 |
-| `06_OBSERVABILITY.md` | downstream | 可观测性实例化 |

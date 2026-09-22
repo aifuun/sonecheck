@@ -1,6 +1,6 @@
 # sonecheck - 技术规格
 
-> **文档流向纪律**：本文档继承引用 upstream `00_PRODUCT_REQUIREMENTS.md`，并被 `02`、`03`、`05`、`06` 引用；**不反向引用下游**。
+> **文档流向纪律**：本文档继承引用 upstream `00_PRODUCT_REQUIREMENTS.md`；**不引用下游，也不声明下游引用方**（引用方向严格单向）。
 > **占位符约定**：`{{FIELD}}` = 结构化命名字段；`<!-- TODO: [dm-init-docs] <说明> -->` = 待补充内容。
 > **权威引用**：测试职责分层见 `dev-meta/docs/06-contract-based-dev.md` §10（唯一权威），本文只做项目落地，不重定义。
 
@@ -77,6 +77,5 @@
 | `00_PRODUCT_REQUIREMENTS.md` | upstream | 业务意图来源 |
 | `dev-meta/docs/06-contract-based-dev.md` §10 | 外部权威 | 测试职责分层（只引用） |
 | `docs/adrs/` | 关联 | 技术选型决策记录（本文 §1 引用 ADR-003 / ADR-004） |
-| `02_SYSTEM_DESIGN.md` | downstream | 架构落地 |
-| `03_CONTRACTS_AND_API.md` | downstream | 契约定义 |
-| `06_OBSERVABILITY.md` | downstream | 可观测性实例化 |
+
+> 方向取值：`upstream`（本文引用它）/ `外部权威`（只引用不重定义）/ `关联`（无层级关系的互补文档）。

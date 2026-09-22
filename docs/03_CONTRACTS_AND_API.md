@@ -1,7 +1,7 @@
 # sonecheck - 契约与 API (Contracts SSOT)
 
 > **文档流向纪律**：本文档严格依赖 upstream `01_TECHNICAL_SPEC.md` 与 `02_SYSTEM_DESIGN.md`。
-> 本文档定义系统**不可变式、数据类型、存储 Schema 及 API 契约**，作为下游实现与测试的**只读 SSOT**；下游（`04`、`05`、`06`）引用本文，**本文不反向引用下游**。
+> 本文档定义系统**不可变式、数据类型、存储 Schema 及 API 契约**，作为下游实现与测试的**只读 SSOT**；**不引用下游，也不声明下游引用方**（引用方向严格单向）。
 > **占位符约定**：`{{FIELD}}` = 结构化命名字段；`<!-- TODO: [dm-init-docs] <说明> -->` = 待补充内容。
 > **权威引用**：契约记录规范（四要素 + 域-序号编号）与失败面契约见 `dev-meta/docs/06-contract-based-dev.md` §4 / §5（唯一权威）；契约**状态生命周期**见 §4.2；契约**资产组织 / 索引 / 归档**见 §6；**引用与定位纪律**（单向引用 / 语义锚点 / 禁写现状 / 结构 lint）见 §7；契约只读纪律见 §8。本文只落地，不重定义。
 
@@ -249,8 +249,6 @@
 | `01_TECHNICAL_SPEC.md` | upstream | 技术选型与约束 |
 | `02_SYSTEM_DESIGN.md` | upstream | 架构与数据流 |
 | `dev-meta/docs/06-contract-based-dev.md` | 外部权威 | 契约规范：§4 记录 / §4.2 状态 / §6 组织与索引 / §7 引用纪律（只引用） |
-| `04_UI_UX_DESIGN.md` | downstream | 视图状态与交互 |
-| `06_OBSERVABILITY.md` | downstream | 失败面可观测性 |
 
 ---
 
