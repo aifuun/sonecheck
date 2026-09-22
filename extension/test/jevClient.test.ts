@@ -67,6 +67,26 @@ describe('scoreHunk', () => {
     expect(result).toEqual({ score: 0, decision: 'PASS', reasonCode: 'STYLE_ONLY' });
   });
 
+  it('四维全命中时合成得分为 1（上边界）', () => {
+    const lines = [
+      '+export function auth() {',
+      '+  const token = password;',
+      '+  session.save();',
+      '+  delete cache;',
+      '+  db.transaction(() => {});',
+      '+  try { auth(); } catch (error) {}',
+      ...Array.from({ length: 30 }, (_, index) => `+  pad${index}();`),
+    ].join('\n');
+    const result = scoreHunk({
+      payload: payloadOf({ filePath: 'src/auth/login.ts', diffHunk: `@@ -1,1 +1,36 @@\n${lines}` }),
+      policy,
+    });
+
+    expect(result.score).toBe(1);
+    expect(result.decision).toBe('AUDIT');
+    expect(result.reasonCode).toBe('AUTH_BOUNDARY');
+  });
+
   it('合成得分被截断在 [0, 1]', () => {
     const huge = Array.from({ length: 200 }, (_, index) => `+export const value${index} = token;`).join('\n');
     const result = scoreHunk({
