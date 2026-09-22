@@ -24,7 +24,7 @@
 | 3 | v0.1.0-dev-02 | dev | 设计 | **S1 Contract & ADR**：ADR-001（TS 迁移）/ ADR-002（mock 判定器）落盘，冻结 `jevClient` 签名，回写 `03` 契约状态。详见 `400-build` §3.2 | ★★☆☆☆ | 1h | ADR 已落盘；`03` 状态标注完成；契约检查通过 | ✅ |
 | 4 | v0.1.0-dev-03 | dev | 开发 | **S2 Core & Prototype**：`parseDiff` / `buildContext` / `scoreHunk` 三个纯函数 + Harness 实测数据（双数据源）。详见 `400-build` §3.3 | ★★★★☆ | 3h | Harness 产出 score 分布与字节数分布；三个纯函数单测通过 | ✅ |
 | 5 | v0.1.0-dev-04 | dev | 开发 | **S3 Standard Finalization**：用实测数据回填 `riskThreshold` / 窗口参数 / payload 上限；契约 `[PLANNED]` → `[CURRENT]`。详见 `400-build` §3.4 | ★★★☆☆ | 1h | `03` 中不再存在无实测依据的阈值 | ✅ |
-| 6 | v0.1.0-dev-05 | dev | 开发 | **S4 Ingress Migration**：`git` / `configSource` / `config` / `riskEngine` / `commands` 接线与装配。详见 `400-build` §3.5 | ★★★☆☆ | 2h | 命令可触发，能解析出 hunk 数组，`GUARD-01/02` 全绿 | ⬜ |
+| 6 | v0.1.0-dev-05 | dev | 开发 | **S4 Ingress Migration**：`git` / `configSource` / `config` / `riskEngine` / `commands` 接线与装配。详见 `400-build` §3.5 | ★★★☆☆ | 2h | 命令可触发，能解析出 hunk 数组，`GUARD-01/02` 全绿 | ✅ |
 | 7 | v0.1.0-dev-06 | dev | 开发 | **S5 Egress Migration**：`threshold` 过滤与 Top-K、QuickPick 清单、跳转定位、状态栏双态。详见 `400-build` §3.6 | ★★★☆☆ | 2h | 真机点击条目可精准跳转；`GUARD-05` 全绿 | ⬜ |
 | 8 | v0.1.0-dev-07 | dev | 测试 | **S6 Guards & Tests**：5 条防腐守卫 + T1 全量单测 + 契约结构 lint（无条件必跑）。详见 `400-build` §3.7 | ★★★☆☆ | 2h | 守卫全绿、单测全绿、lint 通过 | ⬜ |
 | 9 | v0.1.0-dev-08 | dev | 发布 | **S7 Verification & Close**：真机逐项验收、`.vsix` 打包、Marketplace `0.1.0` 发布、tag 与 Issue 收口。详见 `400-build` §3.8 | ★★☆☆☆ | 1h | `200-spec` §2 八项验收全过；`0.1.0` 已上架 | ⬜ |
@@ -75,3 +75,11 @@
 - **发现**：mock 分布下预设阈值 0.85 不可达（max 0.449）；分离点是规模噪声地板 0.20，取 2.0 倍 → 命中率 1.4%，且「敏感路径命中必 AUDIT」与 `200-spec` §2 的验收场景一致
 - **失误**：无
 - **遗留**：`INV-01` / `INV-05` / `INV-06` / `API-02` / `ERR-06` / `ERR-07` / `ERR-09` 的状态翻牌 → S6
+
+#### S4 Ingress Migration（8976b58）
+
+- **概要**：把「读 diff → 切块 → 补上下文 → 判定 → 过滤」接成一条可触发命令（配置读取与归一、本地失败分类、装配注入齐备），使主链路首次可由用户端触发
+- **偏差**：① `threshold.ts` 提前到本步（`400-build` §1.2 已冻结 `inspect()` 返回 `RiskItem[]`，过滤是必经环节），S5 因此专注 UI 层；② 新增 `infra/sourceReader.ts`（只读源文件）并写入 `02` / `300-design`；③ T1 需要解析 `vscode`，新增 `vitest.config.mts` 别名到测试桩
+- **发现**：临时仓库端到端用例覆盖「敏感路径 → `AUTH_BOUNDARY` 入清单 / 纯样式 → 零打扰 / 无暂存 → `ERR-07` / `enabled=false` 短路 / 清单项可定位」，47 例单测全绿；`vsce ls` 仅 `out/**` 入包（含 `vitest.config.*` 排除生效）
+- **失误**：无
+- **遗留**：Extension Development Host 真机确认（命令触发与提示）→ S5 接 UI 后一并验证
