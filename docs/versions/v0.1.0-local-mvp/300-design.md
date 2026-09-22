@@ -107,6 +107,15 @@
 - **`reason_code`**：取**权重最高的命中维度**对应的枚举。本版落地 `AUTH_BOUNDARY` / `DATA_WRITE` / `CONTRACT_BREAK` / `ERROR_HANDLING` / `STYLE_ONLY` 五项；未命中任何维度时返回 `STYLE_ONLY`。
 - **选型理由**：权重可调、维度可解释，四个维度的原始值都能在 Harness 中统计分布，满足 `dev-meta/docs/02-version-rules.md` §6.3「数据驱动阈值（强制）」的要求。
 - **实现归属**：`scoreHunk(input): DecisionResult` 属 `infra/jevClient` 的**内部实现**（与 `decide()` 同文件），不单独成模块；`v0.1.1` 换真实客户端时只替换该文件实现，签名与 `DecisionResult` 字段不变（ADR-002）。
+- **归因规则**：`reason_code` 由**三维语义维度**中权重最高者决定——敏感路径 → `AUTH_BOUNDARY`；导出符号 → `CONTRACT_BREAK`；关键词组 → `AUTH_BOUNDARY` / `DATA_WRITE` / `ERROR_HANDLING`（同组内按词表顺序取先命中者）。**改动规模只参与打分、不决定归因**（它不说明「改了什么」）。无改动行或三维全未命中时返回 `STYLE_ONLY`。
+
+### 4.3 hunk 切分（超限保护）
+
+- **问题**：git 的 hunk 不是 wire 单位——单个 hunk 的 `diff_hunk` 可能超过 `INV-02` 的 payload 上限（S2 Harness 实测：本项目 40 个提交的原始 hunk 中约 14% 超限）。
+- **方案**：`parseDiff` 解析后按 `MAX_DIFF_WIRE_BYTES = MAX_PAYLOAD_BYTES − HUNK_METADATA_RESERVE_BYTES` 顺序切分；每个子 hunk 保留 `@@` 头、**真实起始行**与全部改动行，**不重排、不丢行**。
+- **兜底**：单行自身超限（压缩产物）时截断该行——`INV-02` 的优先级高于「diff 原文完整性」。
+- **代价**：解析结果不再逐字等于 `git diff --staged` 的 hunk 划分（`INV-02` 的必然结果）；`200-spec` §2 的「抓取与切块」验收据此表述。
+- **实测**：S2 Harness 436 个 hunk，payload 越界数 = 0。
 - **与 Jev 真实原语的对应**：本版 mock 的「多维加权合成」即官方推荐的 **composite scoring** 模式——真实接入时每个维度改为一个独立的 `noul` question（同一 `state`、单次调用内并行评估），权重仍在本地代码组合。因此 `scoreHunk` 的签名与权重结构在 `v0.1.1` **不变**，只替换 `infra/jevClient` 的实现（`03` §2.1）。
 
 ---

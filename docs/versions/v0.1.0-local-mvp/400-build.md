@@ -17,7 +17,7 @@
 
 | 类型 | 字段 | 说明 |
 |---|---|---|
-| `Hunk` | `filePath` / `startLine` / `diffContent` | diff 切块结果 |
+| `Hunk` | `filePath` / `startLine` / `changeType` / `diffContent` | diff 切块结果（`changeType` 由文件头 `/dev/null` 标记判定，供 payload 组装；超长 hunk 已按 `300-design` §4.3 切分） |
 | `HunkPayload` | `filePath` / `changeType` / `diffHunk` / `contextCode` | 出站请求体（**不含** `local_metadata`，见 `200-spec` §1.1）；序列化时映射为 `03` §2.1 的 snake_case（`file_path` / `change_type` / `diff_hunk` / `context_code`），映射实现归 `infra/jevClient` |
 | `DecisionResult` | `score` / `decision` / `reasonCode` | 判定结果 |
 | `RiskItem` | `filePath` / `startLine` / `score` / `reasonCode` | 清单条目（`INV-06` 要求可定位） |
@@ -41,7 +41,7 @@
 - **失败重试**：本版不适用（判定器为本地纯函数，无网络）
 - **并发冲突**：本版不适用（顺序调用；并发上限 4 的实现留待 `v0.1.1`）
 - **配额不足**：本版不适用
-- **大数据量**：payload 序列化总长硬上限 2048 字节（`context_code` 按剩余预算截断）；hunk 总数不设上限，但清单条数由 `maxItems` 截断
+- **大数据量**：payload 序列化总长硬上限 2048 字节（`diff_hunk` 超限的 hunk 已在 `parseDiff` 按 `300-design` §4.3 切分，`context_code` 再按剩余预算截断）；hunk 总数不设上限，但清单条数由 `maxItems` 截断
 - **异常归属**（`200-spec` §1 约定）：本地失败只落 `ERR-06` / `ERR-07` / `ERR-09`；其余异常向上抛至 `ui/commands` 提示一次后终止，**不静默吞**
 
 ### 1.4 防腐契约
@@ -155,7 +155,7 @@ async function decide(payload: HunkPayload): Promise<DecisionResult>
 
 - **目标**：在隔离环境中把三处纯逻辑抽成无 IO 依赖的函数，并用 Harness 跑出用于 S3 定阈值的真实数据。
 - **步骤拆解**：
-  1. `src/infra/diffParser.ts`：diff 文本 → `Hunk[]`
+  1. `src/infra/diffParser.ts`：diff 文本 → `Hunk[]`（含 `changeType`；`diff_hunk` 超限时按 `300-design` §4.3 切分，保证单块可承载于一个 payload）
   2. `src/core/contextBuilder.ts`：括号配对作用域识别 + 固定窗口兜底 + 按 payload 剩余预算截断（总长 ≤ `MAX_PAYLOAD_BYTES`）
   3. `src/infra/jevClient.ts` 的 mock 实现：四维加权打分（`scoreHunk`；权重见 `300-design` §4.2）
   4. Harness 脚本 `harness/measure.ts`：对**本项目 git 历史 diff** 与**构造样本仓库**跑统计，输出：hunk 数分布、四维命中率、score 分布、`context_code` 字节数分布（运行方式 `npx tsx harness/measure.ts`；该目录不进打包产物，已在 S0 的 `.vscodeignore` 排除）

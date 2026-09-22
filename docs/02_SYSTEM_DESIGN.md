@@ -48,7 +48,7 @@
 | `src/core/config.ts` | 配置模型与校验：校验阈值范围、归一默认值（纯逻辑，**不接触 VS Code API**） | `normalizeConfig()` | 私有 |
 | `src/infra/configSource.ts` | 从 `workspace.getConfiguration` 与 SecretStorage 读取原始配置 / 密钥可用性（唯一接触 VS Code 配置 API 的出口） | `readRawConfig()` / `hasApiKey()` | 私有 |
 | `src/infra/git.ts` | 取工作区根、执行 `git diff --staged` | `readStagedDiff()` | 私有 |
-| `src/infra/diffParser.ts` | diff 文本 → hunk 数组（文件、起始行、内容） | `parseDiff()` | 私有 |
+| `src/infra/diffParser.ts` | diff 文本 → hunk 数组（文件、起始行、变更类型、内容；超长 hunk 按 payload 上限切分） | `parseDiff()` | 私有 |
 | `src/infra/jevClient.ts` | Jev 决策请求（超时、重试、错误归一：上游状态码 → 契约错误码的唯一映射处） | `IJevClient` / `decide()` | 私有 |
 | `src/infra/secrets.ts` | API Key 读写（VS Code SecretStorage） | `getApiKey()` / `setApiKey()` | 私有 |
 | `src/infra/logger.ts` | `observe()` 包装器 + Output Channel 输出 | `observe()` / `log(event)` | 私有 |
