@@ -51,7 +51,7 @@
 | 8 | 状态栏双态（检查中 / All Clear），无风险时不弹窗 | `04` §2、US-03 |
 | 9 | 注册命令 `sonecheck.inspectDiff`（命令面板 / 快捷键触发） | `03` §2.2 `API-02` |
 | 10 | S2 Harness 用真实仓库 diff 跑出实测数据，S3 回填契约阈值（`riskThreshold` / payload 上限） | `dev-meta/docs/02-version-rules.md` §6.3、Step S3 |
-| 11 | 本版范围的 T1 单测：`300-design` §7 的 5 个纯 Node 关注点（解析 / 截取 / 打分 / 过滤 / 归一） | `01` §3、`300-design` §7 |
+| 11 | 本版范围的 T1 单测：5 个纯 Node 关注点（解析 / 截取 / 打分 / 过滤 / 归一） | `01` §3 |
 | 12 | 打包 `.vsix` 并发布 Marketplace `0.1.0`（同时达成 M2） | `01` §4 |
 
 **本版不交付**（保持 `[PLANNED]`，归入 `v0.1.1`）

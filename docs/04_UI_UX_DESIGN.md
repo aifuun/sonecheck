@@ -52,7 +52,7 @@
 | **Semantic** 语义层 | 映射到原生控件语义：`StatusBarItem.warningBackground` / `errorBackground`；QuickPick 使用主题默认前景背景 |
 | **Component** 组件层 | 不适用（无自绘组件） |
 
-- **令牌文件（SSOT 载体）**：`<!-- TODO: [dm-init-docs] 如后续引入 Webview 再补 tokens.json；当前无 -->`
+- **令牌文件（SSOT 载体）**：**本项目无**——界面全部使用 VS Code 原生控件，不存在自绘视觉层，故不引入 `tokens.json`。若后续引入 Webview，须按 `dev-meta/docs/09-ai-architecture-guide.md` §7 补三层令牌。
 - **红线**：即使引入主题色，也**禁止**在扩展内硬编码颜色字面量（如 `#ff0000`）；须经 `ThemeColor` API 引用主题令牌。
 - 规范与红线见 `dev-meta/docs/09-ai-architecture-guide.md` §7。
 
