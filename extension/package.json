@@ -29,14 +29,21 @@
   "bugs": {
     "url": "https://github.com/rolligen/sonecheck/issues"
   },
-  "main": "./extension.js",
+  "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "sonecheck.showStatus",
-        "title": "SoneCheck: Show Status"
+        "command": "sonecheck.inspectDiff",
+        "title": "SoneCheck: Inspect Staged Diff"
       }
     ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npm run compile && vsce package",
+    "test:unit": "vitest run",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -2,3 +2,9 @@
 .gitignore
 **/*.ts
 **/tsconfig.json
+
+# TypeScript sources and dev-only assets stay out of the .vsix
+src/
+test/
+harness/
+**/*.map
