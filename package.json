@@ -18,14 +18,17 @@
     "developer-tools"
   ],
   "license": "MIT",
-  "author": "aifuun",
-  "homepage": "https://github.com/aifuun/sonecheck#readme",
+  "author": {
+    "name": "ROLLIGEN",
+    "url": "https://github.com/rolligen"
+  },
+  "homepage": "https://github.com/rolligen/sonecheck#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aifuun/sonecheck.git"
+    "url": "git+https://github.com/rolligen/sonecheck.git"
   },
   "bugs": {
-    "url": "https://github.com/aifuun/sonecheck/issues"
+    "url": "https://github.com/rolligen/sonecheck/issues"
   },
   "main": "./index.js",
   "types": "./index.d.ts",

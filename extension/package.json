@@ -22,12 +22,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/aifuun/sonecheck.git",
+    "url": "https://github.com/rolligen/sonecheck.git",
     "directory": "extension"
   },
-  "homepage": "https://github.com/aifuun/sonecheck#readme",
+  "homepage": "https://github.com/rolligen/sonecheck#readme",
   "bugs": {
-    "url": "https://github.com/aifuun/sonecheck/issues"
+    "url": "https://github.com/rolligen/sonecheck/issues"
   },
   "main": "./extension.js",
   "contributes": {

@@ -10,7 +10,7 @@
  * silently, so that anyone who installs this version learns immediately where
  * the real implementation lives.
  *
- * Roadmap and design documents: https://github.com/aifuun/sonecheck
+ * Roadmap and design documents: https://github.com/rolligen/sonecheck
  *
  * @see README.md
  */
@@ -35,7 +35,7 @@ function createNotImplementedError(apiName) {
     `sonecheck@${RESERVED_VERSION} does not implement "${apiName}" yet. ` +
       `This version only reserves the package name. ` +
       `The first functional release is ${FIRST_FUNCTIONAL_VERSION}. ` +
-      `Status: https://github.com/aifuun/sonecheck`
+      `Status: https://github.com/rolligen/sonecheck`
   );
   error.code = NOT_IMPLEMENTED;
   return error;

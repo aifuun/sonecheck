@@ -55,6 +55,6 @@ here only to describe a technical dependency.
 [MIT](LICENSE)
 
 > Design documents are written in Chinese and live in the
-> [`docs/` directory](https://github.com/aifuun/sonecheck/tree/main/docs).
+> [`docs/` directory](https://github.com/rolligen/sonecheck/tree/main/docs).
 > Issues and discussions are welcome via
-> [GitHub Issues](https://github.com/aifuun/sonecheck/issues).
+> [GitHub Issues](https://github.com/rolligen/sonecheck/issues).

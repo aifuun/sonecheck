@@ -7,7 +7,7 @@
  * No inspection functionality is implemented yet; the single command below
  * exists so the listing is honest and interactive rather than an empty shell.
  *
- * Roadmap and design documents: https://github.com/aifuun/sonecheck
+ * Roadmap and design documents: https://github.com/rolligen/sonecheck
  */
 
 const vscode = require('vscode');
@@ -29,7 +29,7 @@ function activate(context) {
       vscode.window.showInformationMessage(
         `SoneCheck ${RESERVED_VERSION} only reserves the name. ` +
           `The first functional release is ${FIRST_FUNCTIONAL_VERSION}. ` +
-          'See https://github.com/aifuun/sonecheck'
+          'See https://github.com/rolligen/sonecheck'
       );
     })
   );
