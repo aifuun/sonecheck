@@ -46,7 +46,7 @@
 
 ### 1.4 防腐契约
 
-> ID 沿用 `docs/06` §4 域-序号体系，**与契约层级 L1 / L2 / L3 无关**。
+> ID 沿用 `dev-meta/docs/06-contract-based-dev.md` §4.3 域-序号体系，**与契约层级 L1 / L2 / L3 无关**。
 
 | ID | 拦截目标 | 校验命令 | 作用 |
 |---|---|---|---|
@@ -55,6 +55,8 @@
 | `GUARD-03` | 判定参数被硬编码 | `grep -rn "0\.85\|2048" src/ \| grep -v "constants.ts"` 须无输出 | 守 `INV-07` |
 | `GUARD-04` | payload 超过 2048 字节 | 单测断言 `buildContext` 输出字节数 ≤ 2048 | 守 `INV-02` |
 | `GUARD-05` | 清单项无法定位到真实行列 | 单测断言每个 `RiskItem` 的 `filePath` 与 `startLine` 可解析 | 守 `INV-06` |
+
+> **扫描范围**：`GUARD-01` / `GUARD-03` 的 `grep` 只覆盖 `src/`。T1 单测位于 `test/`（见 `300-design` §7），故用例中出现的 `0.85` / `2048` 字面量不会被 `GUARD-03` 误判。
 
 ---
 
@@ -88,7 +90,7 @@
   2. 新建 `src/ui/` `src/core/` `src/infra/` 三个目录与 `core/index.ts`、`infra/index.ts` 两个 Facade（先只放类型导出）
   3. 新增 `tsconfig.json`：`target: ES2022`、`module: commonjs`、`rootDir: ./src`、`outDir: ./out`、`strict: true`、`sourceMap: true`
   4. `package.json`：`main` 改 `./out/extension.js`；`contributes.commands` 从 `sonecheck.showStatus` 换为 `sonecheck.inspectDiff`；新增 `scripts`（`compile` / `watch` / `package`）；新增 `devDependencies`（`typescript` / `@types/vscode` / `@types/node` / `@vscode/vsce`）
-  5. `.vscodeignore` 增加 `src/`、`tsconfig.json`、`**/*.map`
+  5. `.vscodeignore` 增加 `src/`、`test/`、`tsconfig.json`、`**/*.map`
 - **函数签名与伪代码**：
 
 ```text
@@ -342,6 +344,7 @@ stateDiagram-v2
   [*] --> Idle
   Idle --> Collecting: 命令触发
   Collecting --> Deciding: diff 解析成功
+  Collecting --> [*]: ERR-06 / ERR-09 环境不可用
   Collecting --> [*]: ERR-07 无暂存改动
   Deciding --> Reporting: 判定与过滤完成
   Reporting --> Idle: 用户关闭

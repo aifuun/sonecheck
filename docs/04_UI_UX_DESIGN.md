@@ -102,10 +102,10 @@
 | 1 | 未硬编码任何颜色 / 字号字面量，主题色一律经 `ThemeColor` | 本文 §3.1 红线 | ✅ 正则扫描 |
 | 2 | 视图覆盖**空 / 加载 / 成功 / 错误 / 降级**五态 | 本文 §2 | 🟡 人工对照 |
 | 3 | 错误与降级态**有留痕**，无静默吞错 | `dev-meta/docs/07-observability-driven-dev.md` §2.5 | 🟡 人工 / 日志检查 |
-| 4 | UI 不自持业务状态（检查状态机归 `core`） | `docs/09` §3.4 | 🟡 人工 Review |
+| 4 | UI 不自持业务状态（检查状态机归 `core`） | `dev-meta/docs/09-ai-architecture-guide.md` §3.4 | 🟡 人工 Review |
 | 5 | 对比度 / 动态字号 / 无障碍标签达标 | WCAG 2.2 AA | ✅ 原生控件 + 人工抽查 |
 | 6 | 无常驻动画；若有须支持 `prefers-reduced-motion` | WCAG 2.2 AA | ✅ 代码扫描 |
-| 7 | **禁跨层取数**：UI 不得直接调 git / HTTP（只经 `core` Facade） | `docs/09` §2 单向分层 | 🟡 人工 Review |
+| 7 | **禁跨层取数**：UI 不得直接调 git / HTTP（只经 `core` Facade） | `dev-meta/docs/09-ai-architecture-guide.md` §2 单向分层 | 🟡 人工 Review |
 | 8 | 清单条目 100% 可跳转，无死链 | 本文 §4 + `INV-06` | ✅ 断言 / 真机 |
 | 9 | API Key 输入使用 `password: true` 且任何提示文案不含 Key | `INV-03` | ✅ 代码审查 |
 

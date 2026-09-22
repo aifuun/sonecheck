@@ -43,7 +43,7 @@
 | 类型边界 | 层间只交换项目自有类型（`Hunk` / `RiskItem` / `DecisionResult` / `SoneCheckConfig`）；`vscode` 类型**只允许**出现在 `src/ui/**` 与 `src/infra/configSource.ts` |
 | 错误域边界 | 本地失败只落 `ERR-06`（非 git 仓库）/ `ERR-07`（无暂存改动）/ `ERR-09`（git 缺失）；`core` 不做 `try-catch`，异常沿调用链上抛至 `ui/commands` 统一提示一次后终止；**不静默吞错** |
 | 模块物理路径 | `src/{ui,core,infra}` → tsc 编译 → `out/{ui,core,infra}`；入口 `src/extension.ts` → `out/extension.js` |
-| 工程登记 | `package.json` 的 `main` 改为 `./out/extension.js`；`.vscodeignore` 排除 `src/`、`tsconfig.json`、`**/*.map` |
+| 工程登记 | `package.json` 的 `main` 改为 `./out/extension.js`；`.vscodeignore` 排除 `src/`、`test/`、`tsconfig.json`、`**/*.map` |
 
 ---
 
@@ -148,3 +148,4 @@
 
 - **单元覆盖对象**：本版核心逻辑（解析 / 截取 / 打分 / 过滤 / 归一）全部可纯 Node 测试，构成 T1 的主要覆盖面。
 - **不写单测的部分**：`ui/**` 的原生控件交互无法在纯 Node 复现，以真机验证替代——依据见 `01` §3。
+- **测试目录**：`test/`（与 `src/` 平级，**不在 `src/` 内**）。该位置使 `GUARD-03` 的 `grep src/` 天然不扫测试用例中出现的 `0.85` / `2048` 字面量；`.vscodeignore` 需排除 `test/`。
