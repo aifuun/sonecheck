@@ -49,6 +49,7 @@
 ### 2.1 `API-01` JevDecision（出站：sonecheck → Jev）
 
 - **状态**：`[PLANNED]`
+- **生效版本**：`v0.1.0` 只兑现**签名与本地派生字段**（`infra/jevClient` 为本地 mock，不发网络、不涉及 API Key）；失败面 `ERR-01`~`ERR-05` 与真实 HTTP 链路归 `v0.1.1`
 - **Path**：`POST https://api.typesafe.ai/v1/systemone`
 - **鉴权**：`Authorization: Bearer <API_KEY>`（Key 存 VS Code SecretStorage，见 §3 `CFG-01`）
 - **Header**：`Content-Type: application/json`
