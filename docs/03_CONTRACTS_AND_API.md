@@ -13,12 +13,12 @@
 
 | 编号 | 状态 | 不变式 | 归属 | 方向 | 真值来源 | 可执行验证 |
 |------|------|--------|------|------|----------|-----------|
-| INV-01 | `[PLANNED]` | 检查流程不得阻断、取消或延迟用户的提交动作；检查的全部失败都必须以「放行」收尾 | `core/riskEngine` | 内部 | 本文 §1 + `00` §3 可用性 | 单测：任一失败分支后仍返回放行（空清单 / `PASS`），且不向上抛错 |
+| INV-01 | `[CURRENT]` | 检查流程不得阻断、取消或延迟用户的提交动作；检查的全部失败都必须以「放行」收尾 | `core/riskEngine` | 内部 | 本文 §1 + `00` §3 可用性 | 单测：`test/riskEngine.test.ts`（本地失败以 `ERR-*` 分类失败抛出、成功路径恒返回 `RiskItem[]`）；`ui/commands.ts` 的 `catch` 不重抛 |
 | INV-02 | `[CURRENT]` | 任何离开本机的 payload 只含 diff hunk 与该 hunk 的限长上下文（**单块 payload ≤ 2KB = 2048 字节，含 `context_code`**），**不得包含完整源文件** | `core/contextBuilder` | 出站 | 本文 §2.1 Request | 单测：`test/contextBuilder.test.ts` 断言 payload 序列化总长 ≤ 2048；`test/diffParser.test.ts` 断言切分后单块不越界 |
 | INV-03 | `[PLANNED]` | Jev API Key 不得以明文出现在工作区文件、日志、遥测、错误信息或 UI 文本中 | `infra/secrets` | 内部 | 本文 §3 | `grep -rn "jevApiKey" src/ \| grep -v "infra/secrets.ts"` 须无输出；单测：日志字段不含 Key 值 |
 | INV-04 | `[PLANNED]` | Jev 不可用（网络失败 / 超时 / 配额耗尽 / 非 2xx）时必须降级为「静默放行 + 一次性提示」，不得向上抛错终止流程 | `infra/jevClient` | 内部 | 本文 §4 `ERR-01`–`ERR-04` | 契约测试（HTTP 层拦截注入 `401` / `429` / `529` / 超时）：断言返回降级结果、不抛错、仅提示一次 |
-| INV-05 | `[PLANNED]` | 检查过程对工作区严格只读：不得修改、暂存、格式化或删除任何文件 | `infra/git` | 内部 | `02` §3 边界说明 | `grep -rn "git " src/infra/git.ts` 只允许 `diff` / `rev-parse` 等只读子命令；出现 `add` / `commit` / `checkout` / `reset` 即失败 |
-| INV-06 | `[PLANNED]` | 清单中每一项必须可定位到真实存在的文件与行号（禁止展示无法跳转的条目） | `ui/riskList` | 内部 | 本文 §2.2 | 单测：`filePath` 不存在或行号越界的条目被剔除出返回值 |
+| INV-05 | `[CURRENT]` | 检查过程对工作区严格只读：不得修改、暂存、格式化或删除任何文件 | `infra/git` | 内部 | `02` §3 边界说明 | 单测：`test/git.test.ts` 断言调用前后 `git status --porcelain` 完全一致；`grep`：`src/infra/git.ts` 只出现 `diff` / `rev-parse` 子命令 |
+| INV-06 | `[CURRENT]` | 清单中每一项必须可定位到真实存在的文件与行号（禁止展示无法跳转的条目） | `ui/riskList` | 内部 | 本文 §2.2 | 单测：`test/threshold.test.ts`（不可定位即剔除）与 `test/riskEngine.test.ts`（清单项的 `filePath` / `startLine` 可在真实文件中解析） |
 | INV-07 | `[CURRENT]` | 风险阈值等判定参数必须来自命名常量或配置，禁止在判定逻辑中硬编码字面量 | `core/threshold` | 内部 | `02` §2 `core/threshold`（`RISK_THRESHOLD` 命名常量） | `grep -rnE "\b0\.4\b\|\b2048\b" src/ \| grep -v "constants.ts"` 须无输出 |
 
 **每条契约的必标项**（`dev-meta/docs/06` §4 + §4.2）
@@ -36,7 +36,7 @@
 ```markdown
 ### INV-02 出站 payload 不得含完整源文件 <a id="inv-no-full-source-egress"></a>
 
-- 状态：`[PLANNED]`
+- 状态：`[CURRENT]`
 - 不变性：任意出站请求体中，单块 payload（含 `context_code`）长度 ≤ 2048 字节，且不含 hunk 之外的未改动文件全文。
 ```
 
@@ -134,7 +134,8 @@
 
 ### 2.2 `API-02` 命令 `sonecheck.inspectDiff`（VS Code 命令契约）
 
-- **状态**：`[PLANNED]`
+- **状态**：`[CURRENT]`
+- **生效版本**：`v0.1.0` 兑现命令注册与三个本地失败面（`ERR-06` / `ERR-07` / `ERR-09`）；`ERR-08`（Key 未配置）随 `API-03` 归 `v0.1.1`
 - **Path**：VS Code 命令 ID `sonecheck.inspectDiff`
 - **Method**：命令调用（无参）
 - **归属 / 调用方**：`ui/commands` / 由用户经命令面板、快捷键或状态栏触发
@@ -226,10 +227,10 @@
 | `ERR-03` | `[PLANNED]` | 非 2xx 响应 | WARN | 降级放行，日志记录状态码 | `v0.1.1` | 契约测试：返回 `500` → 断言日志含 `httpStatus = 500` |
 | `ERR-04` | `[PLANNED]` | 配额耗尽 / 鉴权失败 | ERROR | 降级放行 + 引导检查 API Key | `v0.1.1` | 契约测试：`401` / `429` / `529` → 断言退避次数 ≤ 重试上限且最终降级 |
 | `ERR-05` | `[PLANNED]` | 响应 schema 不合规 | ERROR | 丢弃该块，写入日志，不进入清单 | `v0.1.1` | 单测：缺字段 / 越界 / 枚举外取值各一例 → 断言该块被丢弃、其余块保留 |
-| `ERR-06` | `[PLANNED]` | 非 git 仓库 | WARN | 提示一次并终止 | `v0.1.0` | 单测：git 桩返回非仓库 → 断言终止且提示一次 |
-| `ERR-07` | `[PLANNED]` | 暂存区无改动 | INFO | 提示一次「无暂存改动」 | `v0.1.0` | 单测：空 diff → 断言返回空清单并提示一次 |
+| `ERR-06` | `[CURRENT]` | 非 git 仓库 | WARN | 提示一次并终止 | `v0.1.0` | 单测：`test/git.test.ts` 断言非仓库目录抛出分类失败 `ERR-06` |
+| `ERR-07` | `[CURRENT]` | 暂存区无改动 | INFO | 提示一次「无暂存改动」 | `v0.1.0` | 单测：`test/riskEngine.test.ts` 断言空 diff 抛出分类失败 `ERR-07` |
 | `ERR-08` | `[PLANNED]` | API Key 未配置（`API-02` 前置校验） | ERROR | 提示一次并给出 `sonecheck.setApiKey` 指引 | `v0.1.1` | 单测：密钥可读性为 `false` → 断言终止并给出配置指引 |
-| `ERR-09` | `[PLANNED]` | git 可执行文件缺失 | ERROR | 提示一次并终止 | `v0.1.0` | 单测：git 桩抛 `ENOENT` → 断言终止且提示一次 |
+| `ERR-09` | `[CURRENT]` | git 可执行文件缺失 | ERROR | 提示一次并终止 | `v0.1.0` | 单测：`test/git.test.ts` / `src/infra/git.ts` 的 `ENOENT` 分类分支（真机不可复现，以代码分支 + 分类断言为准） |
 | `ERR-10` | `[PLANNED]` | 用户取消输入（`API-03`） | INFO | 忽略，保持原值 | `v0.1.1` | 真机验证（原生输入框不可在纯 Node 复现）：取消后原值不变 |
 | `ERR-11` | `[PLANNED]` | 输入为空串（清除 Key，`API-03`） | WARN | 二次确认后清除 | `v0.1.1` | 单测：二次确认布尔为 `false` → 断言保留原值；真机验证确认路径 |
 
@@ -299,7 +300,7 @@ docs/
 
 | 编号 | 一句话 | 状态 | 正文 |
 |------|--------|------|------|
-| `INV-02` | 出站 payload 不得含完整源文件 | `[PLANNED]` | `docs/contracts/01-core.md#inv-no-full-source-egress` |
+| `INV-02` | 出站 payload 不得含完整源文件 | `[CURRENT]` | `docs/contracts/01-core.md#inv-no-full-source-egress` |
 
 ### 7.3 拆分纪律
 
