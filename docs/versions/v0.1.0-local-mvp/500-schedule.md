@@ -19,7 +19,7 @@
 
 | # | ID | 类别 | 环节 | 工作内容 | 难度 | 预估工时 | 验收标准 | 状态 |
 |---|-----|------|------|---------|------|---------|---------|------|
-| 1 | v0.1.0-research-01 | research | 调研 | 写明本版要证明的假设（「Top-K 清单能让 review 聚焦」）与判据；在 2 个真实仓库记录人工 review 用的时间基线 | ★★☆☆☆ | 0.5h | 假设、判据、基线记录三者已写明 | ⬜ |
+| 1 | v0.1.0-research-01 | research | 调研 | 写明本版要证明的假设（「Top-K 清单能让 review 聚焦」）与判据；在 2 个真实仓库记录人工 review 用的时间基线 | ★★☆☆☆ | 0.5h | 假设、判据、基线记录三者已写明 | ❌（`[DEFERRED]` → `v0.1.1`，理由见执行记录） |
 | 2 | v0.1.0-dev-01 | dev | 开发 | **S0 Scaffold & Clean**：TS 工程化、`src/`→`out/` 布局、三层目录与 Facade 骨架、`src/constants.ts` 常量骨架、移除占位命令。详见 `400-build` §3.1 | ★★☆☆☆ | 1.5h | `npm run compile` 零错误，Extension Development Host 能加载扩展 | ✅ |
 | 3 | v0.1.0-dev-02 | dev | 设计 | **S1 Contract & ADR**：ADR-001（TS 迁移）/ ADR-002（mock 判定器）落盘，冻结 `jevClient` 签名，回写 `03` 契约状态。详见 `400-build` §3.2 | ★★☆☆☆ | 1h | ADR 已落盘；`03` 状态标注完成；契约检查通过 | ✅ |
 | 4 | v0.1.0-dev-03 | dev | 开发 | **S2 Core & Prototype**：`parseDiff` / `buildContext` / `scoreHunk` 三个纯函数 + Harness 实测数据（双数据源）。详见 `400-build` §3.3 | ★★★★☆ | 3h | Harness 产出 score 分布与字节数分布；三个纯函数单测通过 | ✅ |
@@ -27,7 +27,7 @@
 | 6 | v0.1.0-dev-05 | dev | 开发 | **S4 Ingress Migration**：`git` / `configSource` / `config` / `riskEngine` / `commands` 接线与装配。详见 `400-build` §3.5 | ★★★☆☆ | 2h | 命令可触发，能解析出 hunk 数组，`GUARD-01/02` 全绿 | ✅ |
 | 7 | v0.1.0-dev-06 | dev | 开发 | **S5 Egress Migration**：`threshold` 过滤与 Top-K、QuickPick 清单、跳转定位、状态栏双态。详见 `400-build` §3.6 | ★★★☆☆ | 2h | 真机点击条目可精准跳转；`GUARD-05` 全绿 | ✅ |
 | 8 | v0.1.0-dev-07 | dev | 测试 | **S6 Guards & Tests**：5 条防腐守卫 + T1 全量单测 + 契约结构 lint（无条件必跑）。详见 `400-build` §3.7 | ★★★☆☆ | 2h | 守卫全绿、单测全绿、lint 通过 | ✅ |
-| 9 | v0.1.0-dev-08 | dev | 发布 | **S7 Verification & Close**：真机逐项验收、`.vsix` 打包、Marketplace `0.1.0` 发布、tag 与 Issue 收口。详见 `400-build` §3.8 | ★★☆☆☆ | 1h | `200-spec` §2 八项验收全过；`0.1.0` 已上架 | ⬜ |
+| 9 | v0.1.0-dev-08 | dev | 发布 | **S7 Verification & Close**：真机逐项验收、`.vsix` 打包、Marketplace `0.1.0` 发布、tag 与 Issue 收口。详见 `400-build` §3.8 | ★★☆☆☆ | 1h | `200-spec` §2 八项验收全过；`0.1.0` 已上架（Marketplace 上架 `[DEFERRED]`：待 `VSCE_PAT`） | ✅ |
 
 > 状态：⬜ 待开始 / 🔄 进行中 / ✅ 已完成 / ❌ 已取消
 
@@ -99,3 +99,11 @@
 - **发现**：守卫逻辑做了反向验证（构造必然命中时确实失败），排除「恒真守卫」；T1 基线 51 例 / 8 文件（较 S2 的 25 例只增不减）；契约结构 lint 全绿
 - **失误**：上边界用例首版未拉满关键词维度（4/7），断言失败后改为七词全命中
 - **遗留**：O2 埋点整体归 `v0.1.1`（S0 已登记，本步以 `grep console.log` 无输出为证）；`ERR-09` 真机不可复现，以分类分支为准
+
+#### S7 Verification & Close（1cab484）
+
+- **概要**：真机八项验收全过（VSIX 安装态，`rolligen.sonecheck@0.1.0`）；`.vsix` 已产出；分支合并 `main`（`--no-ff` 保留历史）并打 annotated tag `v0.1.0`
+- **偏差**：Marketplace 上架未执行（无 `VSCE_PAT`）→ `[DEFERRED]`，不阻塞版本收口；research-01 工作包 `[DEFERRED]` → `v0.1.1`
+- **发现**：默认阈值 0.4 下命中 `[0.44] src/auth/login.ts:1 · 鉴权边界`；高风险 / 多块（13 hunk）/ 零打扰 / 无改动四态逐一通过，工作区只读（`git status` 前后一致）
+- **失误**：无
+- **遗留**：`VSCE_PAT` 到位后执行 `npx @vscode/vsce publish`；research-01 的人工 review 时间基线随 `v0.1.1` 真实判定质量指标一并采集（mock 版基线无对照意义）
