@@ -1,0 +1,109 @@
+# v0.1.0 版本排程
+
+> 模板用途：快速起草版本工作包排程、执行记录与一人团队防沉迷红线。
+> 结构唯一权威：`skills/dm-schedule.md` 的「模板结构」节（排程单一权威）。
+> ⚠️ 本文件是**进度状态**（⬜ / 🔄 / ✅）与**执行记录**的唯一承载处；`400-build.md` 只记「执行态」，二者不重复。
+
+> **关联 Roadmap 版本：** `v0.1.0-local-mvp`
+> **上线卡点：** 待定
+> **首期目标：** 主链路真机跑通，并发布 Marketplace `rolligen.sonecheck@0.1.0`
+
+## 1. 一人团队防沉迷红线
+
+1. **市场任务不完成，严禁写新代码**：本版的市场/验证任务是「先写清要证明的假设与判据」，未完成前不进入编码。
+2. **2 小时停损原则**：作用域识别、权重调参等非核心优化若超过 2 小时无果，立刻降级为固定窗口兜底或等权起步，不恋战。
+3. **闭环高于完美**：优先保证主路径通畅（触发 → 清单 → 跳转），边缘异常留待 `v0.1.1`。
+4. **每周日强制对账**：对照本表打勾，超时的工作包通过砍掉后续非核心项补偿时间。Step 内部步骤可重排优先级，但 **Step 本身不可分割**。
+
+## 2. 工作包列表（按执行顺序排列）
+
+| # | ID | 类别 | 环节 | 工作内容 | 难度 | 预估工时 | 验收标准 | 状态 |
+|---|-----|------|------|---------|------|---------|---------|------|
+| 1 | v0.1.0-research-01 | research | 调研 | 写明本版要证明的假设（「Top-K 清单能让 review 聚焦」）与判据；在 2 个真实仓库记录人工 review 用的时间基线 | ★★☆☆☆ | 0.5h | 假设、判据、基线记录三者已写明 | ❌（`[DEFERRED]` → `v0.1.1`，理由见执行记录） |
+| 2 | v0.1.0-dev-01 | dev | 开发 | **S0 Scaffold & Clean**：TS 工程化、`src/`→`out/` 布局、三层目录与 Facade 骨架、`src/constants.ts` 常量骨架、移除占位命令。详见 `400-build` §3.1 | ★★☆☆☆ | 1.5h | `npm run compile` 零错误，Extension Development Host 能加载扩展 | ✅ |
+| 3 | v0.1.0-dev-02 | dev | 设计 | **S1 Contract & ADR**：ADR-001（TS 迁移）/ ADR-002（mock 判定器）落盘，冻结 `jevClient` 签名，回写 `03` 契约状态。详见 `400-build` §3.2 | ★★☆☆☆ | 1h | ADR 已落盘；`03` 状态标注完成；契约检查通过 | ✅ |
+| 4 | v0.1.0-dev-03 | dev | 开发 | **S2 Core & Prototype**：`parseDiff` / `buildContext` / `scoreHunk` 三个纯函数 + Harness 实测数据（双数据源）。详见 `400-build` §3.3 | ★★★★☆ | 3h | Harness 产出 score 分布与字节数分布；三个纯函数单测通过 | ✅ |
+| 5 | v0.1.0-dev-04 | dev | 开发 | **S3 Standard Finalization**：用实测数据回填 `riskThreshold` / 窗口参数 / payload 上限；契约 `[PLANNED]` → `[CURRENT]`。详见 `400-build` §3.4 | ★★★☆☆ | 1h | `03` 中不再存在无实测依据的阈值 | ✅ |
+| 6 | v0.1.0-dev-05 | dev | 开发 | **S4 Ingress Migration**：`git` / `configSource` / `config` / `riskEngine` / `commands` 接线与装配。详见 `400-build` §3.5 | ★★★☆☆ | 2h | 命令可触发，能解析出 hunk 数组，`GUARD-01/02` 全绿 | ✅ |
+| 7 | v0.1.0-dev-06 | dev | 开发 | **S5 Egress Migration**：`threshold` 过滤与 Top-K、QuickPick 清单、跳转定位、状态栏双态。详见 `400-build` §3.6 | ★★★☆☆ | 2h | 真机点击条目可精准跳转；`GUARD-05` 全绿 | ✅ |
+| 8 | v0.1.0-dev-07 | dev | 测试 | **S6 Guards & Tests**：5 条防腐守卫 + T1 全量单测 + 契约结构 lint（无条件必跑）。详见 `400-build` §3.7 | ★★★☆☆ | 2h | 守卫全绿、单测全绿、lint 通过 | ✅ |
+| 9 | v0.1.0-dev-08 | dev | 发布 | **S7 Verification & Close**：真机逐项验收、`.vsix` 打包、Marketplace `0.1.0` 发布、tag 与 Issue 收口。详见 `400-build` §3.8 | ★★☆☆☆ | 1h | `200-spec` §2 八项验收全过；`0.1.0` 已上架（Marketplace 上架 `[DEFERRED]`：待 `VSCE_PAT`） | ✅ |
+
+> 状态：⬜ 待开始 / 🔄 进行中 / ✅ 已完成 / ❌ 已取消
+
+> - dev 工作包以 **Step**（S0–S7）为原子单位组织，不可再拆分为步骤级。每个 Step 引用 `400-build.md` §3 对应小节获取内部步骤。
+> - 仅**执行态为「执行」**的 Step 生成工作包；本版全部 Step 执行态均为「执行」，无 `⏭️ SKIPPED`，故 8 个 dev 工作包全部排程。
+> - dev 工作包完成定义 = 代码 + 部署 + 联调。部署/联调归 dev，不归 qa；qa 只验收已部署 + 已联调的功能。
+> - 环节取值：调研 / 定位 / 设计 / 规格 / 开发 / 构建 / 部署 / 联调 / 测试 / 发布。市场验证环节（营销 / 调研）排最前，dev / qa 工作包排在其后。
+> - **合计预估工时：14h**（research 0.5h + dev 13.5h）。
+
+## 3. 执行记录（Step 完成即追加，append-only）
+
+> 精简规则：每条 ≤ 8 行 · 每段一行 · 无内容写「无」 · 不抄 200 验收与 400 步骤 ·
+> 无偏差且改动 ≤1 文件的 Step 压成一行 · 跳过（`⏭️ SKIPPED`）的 Step 不记录。
+> 日常流水进 worklog（时间轴），本节只记 Step 轴的偏差 / 发现 / 失误 / 遗留。
+> 条目随 Step 完成动态追加，**不编号**（Step 可能跳过，编号会失真）。
+
+#### S0 Scaffold & Clean（5faf30a）
+
+- **概要**：`extension/` 由纯 JS 占位升级为可编译的 TypeScript 三层工程（`src/`→`out/`、两个 Facade、`constants.ts` 常量骨架），为版本提供可施工的工程底座
+- **偏差**：`package-lock.json` 随 `npm install` 一并纳入版本控制（文档未提，属工程基线补全）
+- **发现**：`vsce ls` 确认打包内容仅 `LICENSE` / `README.md` / `package.json` / `out/**`，`src`、测试与 sourcemap 均被正确排除
+- **失误**：无
+- **遗留**：Extension Development Host 加载待真机确认（需用户操作）；`registerCommands()` 待 S4 接入
+
+#### S1 Contract & ADR（c77e80e）
+
+- **概要**：冻结判定服务契约（类型 + `IJevClient` 抽象）并经 infra Facade 导出，使 `core` 只依赖抽象、`v0.1.1` 换真身不动调用方，为整版提供接口边界
+- **偏差**：无
+- **发现**：ADR-001~005 均已落盘且为「已接受」，本步无需新建 ADR；契约结构 lint 全绿、编号集合与状态标记零漂移
+- **失误**：无
+- **遗留**：`decide` 的 mock 实现归 S2（`scoreHunk` 四维加权）
+
+#### S2 Core & Prototype（79e53c5）
+
+- **概要**：把 diff 解析、上下文截取与 mock 判定三处纯逻辑抽成无 IO 依赖的函数（25 例单测全绿），并用 Harness 跑出定阈值所需的实测分布，为整版提供可独立验证的引擎
+- **偏差**：原设计只约束上下文长度，实测发现约 14% 的原始 hunk 其 `diff_hunk` 自身即超 payload 上限 → 新增「按 payload 上限切分 hunk」，沉淀进 `300-design` §4.3 并同步 `400-build` / `200-spec` / `02`
+- **发现**：436 个 hunk 实测 score p50=0.035 / p90=0.20 / max=0.449 —— `CFG-01` 默认阈值 0.85 在 mock 分布下不可达，S3 必须按分布降阈值；payload 越界 0；context 字节 p50=493 / p90=1193
+- **失误**：首版 wire 记账漏算「换行在 JSON 中转义多占 1 字节」，被 diffParser 切分断言捕获后更正
+- **遗留**：`riskThreshold` / `CONTEXT_WINDOW_LINES` / `SCALE_CAP_LINES` 待 S3 按实测回填
+
+#### S3 Standard Finalization（2f39a27）
+
+- **概要**：按 S2 实测把 `riskThreshold` 从预设 0.85 回填为 0.4 并落进 `CFG-01`，完成有证据支撑的契约翻牌，使「判定参数由数据定案」这一条款真正闭环
+- **偏差**：状态翻牌改为**分两批**——S3 只翻有实测 / 单测 / 守卫证据者（`INV-02` / `INV-07` / `API-01` 签名与本地派生 / `CFG-01`），其余兑现项随 S6 全绿后翻牌；已把该规则写进 `03` §5 与 `400-build` S3 步骤
+- **发现**：mock 分布下预设阈值 0.85 不可达（max 0.449）；分离点是规模噪声地板 0.20，取 2.0 倍 → 命中率 1.4%，且「敏感路径命中必 AUDIT」与 `200-spec` §2 的验收场景一致
+- **失误**：无
+- **遗留**：`INV-01` / `INV-05` / `INV-06` / `API-02` / `ERR-06` / `ERR-07` / `ERR-09` 的状态翻牌 → S6
+
+#### S4 Ingress Migration（8976b58）
+
+- **概要**：把「读 diff → 切块 → 补上下文 → 判定 → 过滤」接成一条可触发命令（配置读取与归一、本地失败分类、装配注入齐备），使主链路首次可由用户端触发
+- **偏差**：① `threshold.ts` 提前到本步（`400-build` §1.2 已冻结 `inspect()` 返回 `RiskItem[]`，过滤是必经环节），S5 因此专注 UI 层；② 新增 `infra/sourceReader.ts`（只读源文件）并写入 `02` / `300-design`；③ T1 需要解析 `vscode`，新增 `vitest.config.mts` 别名到测试桩
+- **发现**：临时仓库端到端用例覆盖「敏感路径 → `AUTH_BOUNDARY` 入清单 / 纯样式 → 零打扰 / 无暂存 → `ERR-07` / `enabled=false` 短路 / 清单项可定位」，47 例单测全绿；`vsce ls` 仅 `out/**` 入包（含 `vitest.config.*` 排除生效）
+- **失误**：无
+- **遗留**：Extension Development Host 真机确认（命令触发与提示）→ S5 接 UI 后一并验证
+
+#### S5 Egress Migration（0c360bb）
+
+- **概要**：接通「过滤 → 清单 → 跳转」输出侧（QuickPick 条目文案 + 跳转定位 + 四态状态栏 + 一次性提示），使主链路从命令触发到点击定位完整可用且保持零打扰
+- **偏差**：`threshold.ts` 已在 S4 落地，本步只复核其契约用例；新增 `04` §1 的 `reason_code` 显示文案表（文案 SSOT），避免文案散落在代码里
+- **发现**：`04` §5 的 9 项检查清单逐项核对通过（第 3 项「降级留痕」与第 9 项「Key 输入」在 `v0.1.0` 不适用，O2 埋点已由 S0 登记归 `v0.1.1`）；`src/ui` 无颜色/字号字面量，状态栏经 `ThemeColor`
+- **失误**：无
+- **遗留**：真机点击跳转（T3，S7 验收）；`GUARD-05` 已由单测覆盖，脚本化守卫在 S6 落盘
+
+#### S6 Guards & Tests（e841615）
+
+- **概要**：把 5 条防腐守卫脚本化（`guard:01`~`guard:05` + 聚合 `guard`）、补齐 T1 全量单测并跑通契约结构 lint，使「改坏会被自动拦住」从约定变为可执行门禁
+- **偏差**：无（`GUARD-04/05` 按设计复用单测；`guard:03` 的 grep 模式随 S3 回填从 `0.85` 改为 `0.4`）
+- **发现**：守卫逻辑做了反向验证（构造必然命中时确实失败），排除「恒真守卫」；T1 基线 51 例 / 8 文件（较 S2 的 25 例只增不减）；契约结构 lint 全绿
+- **失误**：上边界用例首版未拉满关键词维度（4/7），断言失败后改为七词全命中
+- **遗留**：O2 埋点整体归 `v0.1.1`（S0 已登记，本步以 `grep console.log` 无输出为证）；`ERR-09` 真机不可复现，以分类分支为准
+
+#### S7 Verification & Close（1cab484）
+
+- **概要**：真机八项验收全过（VSIX 安装态，`rolligen.sonecheck@0.1.0`）；`.vsix` 已产出；分支合并 `main`（`--no-ff` 保留历史）并打 annotated tag `v0.1.0`
+- **偏差**：Marketplace 上架未执行（无 `VSCE_PAT`）→ `[DEFERRED]`，不阻塞版本收口；research-01 工作包 `[DEFERRED]` → `v0.1.1`
+- **发现**：默认阈值 0.4 下命中 `[0.44] src/auth/login.ts:1 · 鉴权边界`；高风险 / 多块（13 hunk）/ 零打扰 / 无改动四态逐一通过，工作区只读（`git status` 前后一致）
+- **失误**：无
+- **遗留**：`VSCE_PAT` 到位后执行 `npx @vscode/vsce publish`；research-01 的人工 review 时间基线随 `v0.1.1` 真实判定质量指标一并采集（mock 版基线无对照意义）

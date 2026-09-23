@@ -2,7 +2,7 @@
 
 > **适用说明**：本文为**可选文档**。纯后端 / CLI / 库类项目**自动跳过**，不生成。
 > 本项目为 VS Code 扩展（有用户界面），故生成；界面**全部由 VS Code 原生控件构成**（QuickPick / 通知 / 状态栏），无 Webview、无自定义视觉层。
-> **文档流向纪律**：本文档继承引用 upstream `00_PRODUCT_REQUIREMENTS.md` 与 `03_CONTRACTS_AND_API.md`；被 `05` 引用，**不反向引用上游以外的内容**。
+> **文档流向纪律**：本文档继承引用 upstream `00_PRODUCT_REQUIREMENTS.md`、`02_SYSTEM_DESIGN.md` 与 `03_CONTRACTS_AND_API.md`；**不引用下游，也不声明下游引用方**（引用方向严格单向）。
 > **占位符约定**：`{{FIELD}}` = 结构化命名字段；`<!-- TODO: [dm-init-docs] <说明> -->` = 待补充内容。
 
 ---
@@ -20,6 +20,18 @@
 | 5 | QuickPick 清单 | 点击某一条 | 打开对应文件，光标定位到该 hunk 起始行 |
 | 6 | QuickPick 清单 | `Esc` 关闭 | 不改变任何状态，流程结束 |
 
+**清单条目文案（本文为文案 SSOT）**：`[score] 文件:行 · reason`，其中 `reason` 的显示文案如下（机器取值见 `03` §2.4）：
+
+| `reason_code` | 显示文案 |
+|---------------|----------|
+| `AUTH_BOUNDARY` | 鉴权边界 |
+| `DATA_WRITE` | 数据写入 |
+| `CONTRACT_BREAK` | 契约破坏 |
+| `ERROR_HANDLING` | 错误处理 |
+| `STYLE_ONLY` | 样式改动 |
+
+> `score` 以两位小数呈现（如 `[0.42]`）；条目文案保持单行短句（`04` §3.3「动态字号」）。
+
 > 首次使用路径：命令面板 → `SoneCheck: Set Jev API Key` → 输入框（`password: true`，不回显）→ 写入 SecretStorage。
 
 ---
@@ -33,7 +45,7 @@
 | 状态栏（`ui/status`） | 无暂存改动：显示 `SoneCheck: 无改动` 后恢复 | 显示 `SoneCheck: 检查中…`（spinner） | 显示 `All Clear` 2s 后恢复 | `ERR-06/09`：显示一次错误并恢复 | `ERR-01~04`：显示 `SoneCheck: 已跳过（服务不可用）` |
 | QuickPick 清单（`ui/riskList`） | **不弹出**（零打扰，US-03） | 不适用（清单仅在判定完成后弹出） | 列出 Top-K 风险项，可键盘选择 | `ERR-05`：不合规项被丢弃，剩余项照常展示 | 同「空」：降级时不弹出清单 |
 | 密钥输入框（`ui/commands`） | `ERR-10` 取消：无操作 | 不适用 | 写入成功并提示「已保存」 | `ERR-11` 空串：二次确认后清除 | 不适用 |
-| 输出通道（`06_OBSERVABILITY.md`） | 无日志时保持空白 | 实时追加 | 结构化日志可读 | 记录 `ERR-*` 原因码 | 记录降级原因与耗时 |
+| 输出通道（`ui/logger` → Output Channel） | 无日志时保持空白 | 实时追加 | 结构化日志可读 | 记录 `ERR-*` 原因码 | 记录降级原因与耗时 |
 
 > 错误与降级态须有可观测留痕，判据见 `06_OBSERVABILITY.md`。
 
@@ -52,7 +64,7 @@
 | **Semantic** 语义层 | 映射到原生控件语义：`StatusBarItem.warningBackground` / `errorBackground`；QuickPick 使用主题默认前景背景 |
 | **Component** 组件层 | 不适用（无自绘组件） |
 
-- **令牌文件（SSOT 载体）**：`<!-- TODO: [dm-init-docs] 如后续引入 Webview 再补 tokens.json；当前无 -->`
+- **令牌文件（SSOT 载体）**：**本项目无**——界面全部使用 VS Code 原生控件，不存在自绘视觉层，故不引入 `tokens.json`。若后续引入 Webview，须按 `dev-meta/docs/09-ai-architecture-guide.md` §7 补三层令牌。
 - **红线**：即使引入主题色，也**禁止**在扩展内硬编码颜色字面量（如 `#ff0000`）；须经 `ThemeColor` API 引用主题令牌。
 - 规范与红线见 `dev-meta/docs/09-ai-architecture-guide.md` §7。
 
@@ -102,10 +114,10 @@
 | 1 | 未硬编码任何颜色 / 字号字面量，主题色一律经 `ThemeColor` | 本文 §3.1 红线 | ✅ 正则扫描 |
 | 2 | 视图覆盖**空 / 加载 / 成功 / 错误 / 降级**五态 | 本文 §2 | 🟡 人工对照 |
 | 3 | 错误与降级态**有留痕**，无静默吞错 | `dev-meta/docs/07-observability-driven-dev.md` §2.5 | 🟡 人工 / 日志检查 |
-| 4 | UI 不自持业务状态（检查状态机归 `core`） | `docs/09` §3.4 | 🟡 人工 Review |
+| 4 | UI 不自持业务状态（检查状态机归 `core`） | `02` §4（状态机定义）+ `dev-meta/docs/09-ai-architecture-guide.md` §3.4 | 🟡 人工 Review |
 | 5 | 对比度 / 动态字号 / 无障碍标签达标 | WCAG 2.2 AA | ✅ 原生控件 + 人工抽查 |
 | 6 | 无常驻动画；若有须支持 `prefers-reduced-motion` | WCAG 2.2 AA | ✅ 代码扫描 |
-| 7 | **禁跨层取数**：UI 不得直接调 git / HTTP（只经 `core` Facade） | `docs/09` §2 单向分层 | 🟡 人工 Review |
+| 7 | **禁跨层取数**：UI 不得直接调 git / HTTP（只经 `core` Facade） | `dev-meta/docs/09-ai-architecture-guide.md` §2 单向分层 | 🟡 人工 Review |
 | 8 | 清单条目 100% 可跳转，无死链 | 本文 §4 + `INV-06` | ✅ 断言 / 真机 |
 | 9 | API Key 输入使用 `password: true` 且任何提示文案不含 Key | `INV-03` | ✅ 代码审查 |
 
@@ -116,7 +128,9 @@
 | 引用对象 | 方向 | 用途 |
 |----------|------|------|
 | `00_PRODUCT_REQUIREMENTS.md` | upstream | 用户故事与验收 |
+| `02_SYSTEM_DESIGN.md` | upstream | 检查状态机（§4）—— 本文 §5 检查项 4 的判据 |
 | `03_CONTRACTS_AND_API.md` | upstream | 接口契约与错误码 |
-| `06_OBSERVABILITY.md` | 平级 | 错误 / 降级留痕 |
-| `05_ROADMAP_AND_COMPLIANCE.md` | downstream | 版本归属 |
-| `dev-meta/docs/09-ai-architecture-guide.md` §7 | upstream | 设计令牌规范与准入线（只引用） |
+| `06_OBSERVABILITY.md` | 关联 | 错误 / 降级留痕落点 |
+| `dev-meta/docs/09-ai-architecture-guide.md` §7 | 外部权威 | 设计令牌规范与准入线（只引用，不重定义） |
+
+> 方向取值：`upstream`（本文引用它）/ `外部权威`（只引用不重定义）/ `关联`（无层级关系的互补文档）。

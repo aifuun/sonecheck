@@ -1,7 +1,7 @@
 # sonecheck - 契约与 API (Contracts SSOT)
 
-> **文档流向纪律**：本文档严格依赖 upstream `01_TECHNICAL_SPEC.md` 与 `02_SYSTEM_DESIGN.md`。
-> 本文档定义系统**不可变式、数据类型、存储 Schema 及 API 契约**，作为下游实现与测试的**只读 SSOT**；下游（`04`、`05`、`06`）引用本文，**本文不反向引用下游**。
+> **文档流向纪律**：本文档严格依赖 upstream `00_PRODUCT_REQUIREMENTS.md`、`01_TECHNICAL_SPEC.md` 与 `02_SYSTEM_DESIGN.md`。
+> 本文档定义系统**不可变式、数据类型、存储 Schema 及 API 契约**，作为下游实现与测试的**只读 SSOT**；**不引用下游，也不声明下游引用方**（引用方向严格单向）。
 > **占位符约定**：`{{FIELD}}` = 结构化命名字段；`<!-- TODO: [dm-init-docs] <说明> -->` = 待补充内容。
 > **权威引用**：契约记录规范（四要素 + 域-序号编号）与失败面契约见 `dev-meta/docs/06-contract-based-dev.md` §4 / §5（唯一权威）；契约**状态生命周期**见 §4.2；契约**资产组织 / 索引 / 归档**见 §6；**引用与定位纪律**（单向引用 / 语义锚点 / 禁写现状 / 结构 lint）见 §7；契约只读纪律见 §8。本文只落地，不重定义。
 
@@ -11,15 +11,15 @@
 
 > **违反以下任何一条即表示系统处于损坏状态**（写实现与测试的第一判据）。
 
-| 编号 | 状态 | 不变式 | 归属 | 方向 | 真值来源 |
-|------|------|--------|------|------|----------|
-| INV-01 | `[PLANNED]` | 检查流程不得阻断、取消或延迟用户的提交动作；检查的全部失败都必须以「放行」收尾 | `core/riskEngine` | 内部 | 本文 §1 + `00` §3 可用性 |
-| INV-02 | `[PLANNED]` | 任何离开本机的 payload 只含 diff hunk 与该 hunk 的限长上下文（单块 ≤ 2KB），**不得包含完整源文件** | `core/contextBuilder` | 出站 | 本文 §2.1 Request |
-| INV-03 | `[PLANNED]` | Jev API Key 不得以明文出现在工作区文件、日志、遥测、错误信息或 UI 文本中 | `infra/secrets` | 内部 | 本文 §3 |
-| INV-04 | `[PLANNED]` | Jev 不可用（网络失败 / 超时 / 配额耗尽 / 非 2xx）时必须降级为「静默放行 + 一次性提示」，不得向上抛错终止流程 | `infra/jevClient` | 内部 | 本文 §4 `ERR-01`–`ERR-04` |
-| INV-05 | `[PLANNED]` | 检查过程对工作区严格只读：不得修改、暂存、格式化或删除任何文件 | `infra/git` | 内部 | `02` §3 边界说明 |
-| INV-06 | `[PLANNED]` | 清单中每一项必须可定位到真实存在的文件与行号（禁止展示无法跳转的条目） | `ui/riskList` | 内部 | 本文 §2.2 |
-| INV-07 | `[PLANNED]` | 风险阈值等判定参数必须来自命名常量或配置，禁止在判定逻辑中硬编码字面量 | `core/threshold` | 内部 | `01` §2 依赖限制 |
+| 编号 | 状态 | 不变式 | 归属 | 方向 | 真值来源 | 可执行验证 |
+|------|------|--------|------|------|----------|-----------|
+| INV-01 | `[CURRENT]` | 检查流程不得阻断、取消或延迟用户的提交动作；检查的全部失败都必须以「放行」收尾 | `core/riskEngine` | 内部 | 本文 §1 + `00` §3 可用性 | 单测：`test/riskEngine.test.ts`（本地失败以 `ERR-*` 分类失败抛出、成功路径恒返回 `RiskItem[]`）；`ui/commands.ts` 的 `catch` 不重抛 |
+| INV-02 | `[CURRENT]` | 任何离开本机的 payload 只含 diff hunk 与该 hunk 的限长上下文（**单块 payload ≤ 2KB = 2048 字节，含 `context_code`**），**不得包含完整源文件** | `core/contextBuilder` | 出站 | 本文 §2.1 Request | 单测：`test/contextBuilder.test.ts` 断言 payload 序列化总长 ≤ 2048；`test/diffParser.test.ts` 断言切分后单块不越界 |
+| INV-03 | `[PLANNED]` | Jev API Key 不得以明文出现在工作区文件、日志、遥测、错误信息或 UI 文本中 | `infra/secrets` | 内部 | 本文 §3 | `grep -rn "jevApiKey" src/ \| grep -v "infra/secrets.ts"` 须无输出；单测：日志字段不含 Key 值 |
+| INV-04 | `[PLANNED]` | Jev 不可用（网络失败 / 超时 / 配额耗尽 / 非 2xx）时必须降级为「静默放行 + 一次性提示」，不得向上抛错终止流程 | `infra/jevClient` | 内部 | 本文 §4 `ERR-01`–`ERR-04` | 契约测试（HTTP 层拦截注入 `401` / `429` / `529` / 超时）：断言返回降级结果、不抛错、仅提示一次 |
+| INV-05 | `[CURRENT]` | 检查过程对工作区严格只读：不得修改、暂存、格式化或删除任何文件 | `infra/git` | 内部 | `02` §3 边界说明 | 单测：`test/git.test.ts` 断言调用前后 `git status --porcelain` 完全一致；`grep`：`src/infra/git.ts` 只出现 `diff` / `rev-parse` 子命令 |
+| INV-06 | `[CURRENT]` | 清单中每一项必须可定位到真实存在的文件与行号（禁止展示无法跳转的条目） | `ui/riskList` | 内部 | 本文 §2.2 | 单测：`test/threshold.test.ts`（不可定位即剔除）与 `test/riskEngine.test.ts`（清单项的 `filePath` / `startLine` 可在真实文件中解析） |
+| INV-07 | `[CURRENT]` | 风险阈值等判定参数必须来自命名常量或配置，禁止在判定逻辑中硬编码字面量 | `core/threshold` | 内部 | `02` §2 `core/threshold`（`RISK_THRESHOLD` 命名常量） | `grep -rnE "\b0\.4\b\|\b2048\b" src/ \| grep -v "constants.ts"` 须无输出 |
 
 **每条契约的必标项**（`dev-meta/docs/06` §4 + §4.2）
 
@@ -36,8 +36,8 @@
 ```markdown
 ### INV-02 出站 payload 不得含完整源文件 <a id="inv-no-full-source-egress"></a>
 
-- 状态：`[PLANNED]`
-- 不变性：任意出站请求体中，单块内容长度 ≤ 2048 字节，且不含 hunk 之外的未改动文件全文。
+- 状态：`[CURRENT]`
+- 不变性：任意出站请求体中，单块 payload（含 `context_code`）长度 ≤ 2048 字节，且不含 hunk 之外的未改动文件全文。
 ```
 
 引用形态：`docs/03_CONTRACTS_AND_API.md#inv-no-full-source-egress` —— slug 全小写连字符、全仓唯一，**不用数字锚点**（数字会随编号调整漂移）。
@@ -48,57 +48,94 @@
 
 ### 2.1 `API-01` JevDecision（出站：sonecheck → Jev）
 
-- **状态**：`[PLANNED]`
-- **Path**：<!-- TODO: [dm-init-docs] 待确认 Jev 官方 endpoint -->
-- **Method**：`POST`
+- **状态**：`[CURRENT]`
+- **生效版本**：`v0.1.0` 只兑现**签名与本地派生字段**（`infra/jevClient` 为本地 mock，不发网络、不涉及 API Key）；失败面 `ERR-01`~`ERR-05` 与真实 HTTP 链路归 `v0.1.1`
+- **Path**：`POST https://api.typesafe.ai/v1/systemone`
+- **鉴权**：`Authorization: Bearer <API_KEY>`（Key 存 VS Code SecretStorage，见 §3 `CFG-01`）
+- **Header**：`Content-Type: application/json`
 - **归属 / 调用方**：`infra/jevClient` / 由 `core/riskEngine` 调用
-- **幂等性**：幂等（同一 hunk 内容重复提交返回语义等价判定）
-- **超时**：单请求超时上限 <!-- TODO: [dm-init-docs] 建议 1500ms -->；超时视为 `ERR-02` 走降级
-- **兼容性**：<!-- TODO: [dm-init-docs] 端点版本策略与字段弃用窗口 -->
+- **幂等性**：幂等（同一 `state` + `questions` 重复提交返回语义等价判定）
+- **超时**：单请求超时上限 <!-- TODO: [dm-init-docs] 由 v0.1.1 的 S3 实测回填 -->，且必须落在单块判定预算内（`00` §3：≤ 500ms）；超时视为 `ERR-02` 走降级
+- **版本兼容性**：请求侧固定 `model: "jev-latest"`；响应体 `model` 字段返回**实际执行的锁定版本**（如 `jev-1.13.0`），须写入日志以便追溯判定口径变化
+- **上游规范**：TypeSafe 官方 API reference（`https://docs.typesafe.ai/api`）为唯一权威；本节只登记**本项目使用的子集**，不重定义上游语义
 
-**Request**
+**Request**（全部输入装入 `state`；`questions` 为原子问题映射，key 由本项目定义）
 
 ```json
 {
-  "file_path": "string  // 仓库相对路径",
-  "change_type": "MODIFY | ADD | DELETE",
-  "diff_hunk": "string  // 本块增删行原文",
-  "context_code": "string  // 该块所在作用域的限长上下文（≤2048 字节）",
-  "local_metadata": {
-    "is_exported": "boolean  // 是否导出符号",
-    "caller_count": "number   // 本地静态分析得到的引用计数",
-    "touches_sensitive_path": "boolean  // 是否命中敏感路径规则"
+  "model": "jev-latest",
+  "state": {
+    "file_path": "string  // 仓库相对路径",
+    "change_type": "MODIFY | ADD | DELETE",
+    "diff_hunk": "string  // 本块增删行原文",
+    "context_code": "string  // 该块所在作用域的限长上下文（计入单块 payload 上限 ≤2048 字节）",
+    "local_metadata": {
+      "is_exported": "boolean  // 是否导出符号",
+      "caller_count": "number   // 本地静态分析得到的引用计数",
+      "touches_sensitive_path": "boolean  // 是否命中敏感路径规则"
+    }
+  },
+  "questions": {
+    "risk_score": {
+      "type": "noul",
+      "instructions": "string  // 对该 hunk 的安全性与缺陷风险给出 0–1 判定"
+    },
+    "reason_code": {
+      "type": "choice",
+      "instructions": "string  // 按 §2.4 枚举给出主要风险归因",
+      "criteria": "map<string, string>  // key 为 §2.4 的枚举值，value 为该类的判定说明"
+    }
   }
 }
 ```
 
-**Response**
+**Response**（上游原样返回，本项目**不改编**）
 
 ```json
 {
-  "score": "number   // 0.0 - 1.0 风险分",
-  "decision": "AUDIT | PASS",
-  "reason_code": "string  // 触发原因分类，取值见 §2.4"
+  "model": "jev-1.13.0",
+  "answers": {
+    "risk_score": { "type": "noul", "noul": 0.91 },
+    "reason_code": {
+      "type": "choice",
+      "choice": "AUTH_BOUNDARY",
+      "probabilities": { "AUTH_BOUNDARY": 0.88, "DATA_WRITE": 0.12 },
+      "confidence": 0.81
+    }
+  },
+  "usage": { "input_tokens": 296, "output_tokens": 20 }
 }
 ```
 
+**本地派生**（以下字段**不在** API 响应中，由 `core/riskEngine` 在本地计算）
+
+| 本项目字段 | 派生方式 |
+|---|---|
+| `score` | `answers.risk_score.noul` |
+| `decision` | `answers.risk_score.noul >= riskThreshold ? "AUDIT" : "PASS"`（阈值见 §3 `CFG-01`） |
+| `reasonCode` | `answers.reason_code.choice`（取值见 §2.4） |
+
+> **不采用 `score` 原语**：`noul` 直接给出 0–1 概率，便于与用户自定义阈值做浮点比较；`score` 原语（2–10 级有序谱系）附带的 `legend` 分级理由在 v0.1.x 无消费场景。
+
 **失败面（Failure Face）**
 
-| 错误码 | 场景 | 返回约定 | 是否静默 |
-|--------|------|----------|----------|
-| `ERR-01` | 网络不可达 / DNS 失败 | 判定结果记为「未知」，按 INV-04 放行 | 否（一次性提示） |
-| `ERR-02` | 请求超时 | 同上 | 否（一次性提示） |
-| `ERR-03` | 非 2xx 响应 | 同上，日志记录状态码 | 否（一次性提示） |
-| `ERR-04` | 配额耗尽 / 鉴权失败 | 同上，提示用户检查 API Key | 否（一次性提示） |
-| `ERR-05` | 响应 schema 不合规（缺字段 / 越界 / `reason_code` 不在枚举内） | 该块丢弃不计入清单 | 否（写入日志） |
+| 错误码 | 上游状态码 | 场景 | 返回约定 | 是否静默 |
+|--------|-----------|------|----------|----------|
+| `ERR-01` | —（连接层） | 网络不可达 / DNS 失败 | 判定结果记为「未知」，按 INV-04 放行 | 否（一次性提示） |
+| `ERR-02` | —（本地计时） | 请求超时 | 同上 | 否（一次性提示） |
+| `ERR-03` | 非 2xx 且非下表 | 其他非 2xx 响应 | 同上，日志记录状态码 | 否（一次性提示） |
+| `ERR-04` | `401` / `429` / `529` | 鉴权失败 / 超配额 / 上游过载 | 同上，提示用户检查 API Key；`429` / `529` 先指数退避重试 | 否（一次性提示） |
+| `ERR-05` | `422` | 请求体校验失败，或响应 schema 不合规（缺字段 / 越界 / `reason_code` 不在枚举内） | 该块丢弃不计入清单 | 否（写入日志） |
 
-> **严禁静默吞错**：纯函数式失败返回空 / 原值而非 nil；危险失败不得静默，须调用前拦截并显式暴露（`dev-meta/docs/06` §5）。
+- **重试策略**：仅对 `429` / `529` 做指数退避（上限 <!-- TODO: [dm-init-docs] 由 v0.1.1 的 S3 实测回填 -->），其余状态码不重试；含退避在内的总耗时不得超过端到端预算（`00` §3：p95 ≤ 1s）。本项目**手写 `fetch` + 退避函数**，不引入官方 SDK（避免额外依赖，见 `01` §2 依赖限制）。
+- **严禁静默吞错**：纯函数式失败返回空 / 原值而非 nil；危险失败不得静默，须调用前拦截并显式暴露（`dev-meta/docs/06` §5）。
 
 ---
 
 ### 2.2 `API-02` 命令 `sonecheck.inspectDiff`（VS Code 命令契约）
 
-- **状态**：`[PLANNED]`
+- **状态**：`[CURRENT]`
+- **生效版本**：`v0.1.0` 兑现命令注册与三个本地失败面（`ERR-06` / `ERR-07` / `ERR-09`）；`ERR-08`（Key 未配置）随 `API-03` 归 `v0.1.1`
 - **Path**：VS Code 命令 ID `sonecheck.inspectDiff`
 - **Method**：命令调用（无参）
 - **归属 / 调用方**：`ui/commands` / 由用户经命令面板、快捷键或状态栏触发
@@ -117,6 +154,8 @@
 | `ERR-07` | 暂存区无改动 | 提示一次「无暂存改动」 | 否 |
 | `ERR-08` | API Key 未配置 | 提示一次并给出配置指引 | 否 |
 | `ERR-09` | git 可执行文件缺失 | 提示一次，终止 | 否 |
+
+> `ERR-08` 归属 `API-02`（Key 前置校验），生效版本为 `v0.1.1`——本表是 `API-02` 的**完整失败面**，生效版本以 §4 为准。
 
 ---
 
@@ -140,19 +179,21 @@
 
 ### 2.4 `reason_code` 取值枚举（`API-01` Response 字段）
 
-> `reason_code` 是 `API-01` Response 的分类字段，供 UI 展示（`04` §1 的清单条目）与用户判断依据。
+> `reason_code` 由 `API-01` 的 `choice` 型 question 产出（见 §2.1）——本表的枚举值即该 question `criteria` 的 **key 集合**。
+> 供 UI 清单条目展示与用户判断依据。
 > **不在本表枚举内的取值视为 schema 不合规**，按 `ERR-05` 丢弃该块。
 
-| 取值 | 含义 | 典型触发场景 |
-|------|------|--------------|
-| `AUTH_BOUNDARY` | 鉴权 / 权限边界变更 | Token 校验、角色判断、Session 逻辑、权限注解 |
-| `DATA_WRITE` | 数据写入 / 事务变更 | INSERT / UPDATE / DELETE、事务边界、金额字段 |
-| `CONTRACT_BREAK` | 对外接口或 Schema 破坏性变更 | 函数签名、REST / RPC 字段、数据表结构变更 |
-| `ERROR_HANDLING` | 异常处理 / 重试逻辑变更 | 删除 try-catch、改重试退避、吞掉错误 |
-| `CONFIG_CHANGE` | 配置或密钥相关变更 | 环境变量、超时值、连接池、密钥读取方式 |
-| `HIGH_FANOUT` | 高引用数符号变更 | 导出函数 / 公共类型被多个调用方引用 |
-| `STYLE_ONLY` | 纯样式 / 注释 / 格式化 | 空行、引号、注释、文档字符串（预期得低分） |
+| 取值 | 含义 | 典型触发场景 | 生效版本 |
+|------|------|--------------|----------|
+| `AUTH_BOUNDARY` | 鉴权 / 权限边界变更 | Token 校验、角色判断、Session 逻辑、权限注解 | `v0.1.0` |
+| `DATA_WRITE` | 数据写入 / 事务变更 | INSERT / UPDATE / DELETE、事务边界、金额字段 | `v0.1.0` |
+| `CONTRACT_BREAK` | 对外接口或 Schema 破坏性变更 | 函数签名、REST / RPC 字段、数据表结构变更 | `v0.1.0` |
+| `ERROR_HANDLING` | 异常处理 / 重试逻辑变更 | 删除 try-catch、改重试退避、吞掉错误 | `v0.1.0` |
+| `CONFIG_CHANGE` | 配置或密钥相关变更 | 环境变量、超时值、连接池、密钥读取方式 | `v0.1.1` |
+| `HIGH_FANOUT` | 高引用数符号变更 | 导出函数 / 公共类型被多个调用方引用 | `v0.1.1` |
+| `STYLE_ONLY` | 纯样式 / 注释 / 格式化 | 空行、引号、注释、文档字符串（预期得低分） | `v0.1.0` |
 
+- **生效版本**：`v0.1.0` 的判定器只产出标 `v0.1.0` 的 5 项（`CONFIG_CHANGE` / `HIGH_FANOUT` 需配置解析与引用计数能力，未在当前版本交付）。本表为**完整枚举集合**，未生效项仍属合规取值，仅当前实现不会产出。
 - **单值返回**：一个 hunk 命中多个维度时，返回**影响面最大**的一个；`reason_code` 不支持多值。
 - **新增取值**属纯增量：须在本表登记并回写编号（见 §5）。
 
@@ -160,12 +201,15 @@
 
 ## 3. 存储 Schema
 
-**`CFG-01` 配置项与密钥存储**（状态 `[PLANNED]`）
+**`CFG-01` 配置项与密钥存储**（状态 `[CURRENT]`）
+
+- **生效版本**：`v0.1.0` 兑现 4 项 workspace 配置；`sonecheck.jevApiKey`（SecretStorage 行）随 `API-03` 归 `v0.1.1`。
+- **默认值依据**：`riskThreshold` 默认值由 S2 Harness 实测回填（436 个 hunk：规模噪声地板 `0.20`、语义命中自 `0.40` 起；阈值取噪声地板的 2.0 倍，命中率 1.4%，且敏感路径命中必 `AUDIT`）。
 
 | 实体 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|------|
-| VS Code SecretStorage | `sonecheck.jevApiKey` | `string` | 仅存于 OS 级密钥库；禁止落盘明文 | 违反即 INV-03 |
-| workspace 配置 | `sonecheck.riskThreshold` | `number` | `0.0 < v < 1.0`，默认 `0.85` | 命中即计入清单 |
+| VS Code SecretStorage | `sonecheck.jevApiKey` | `string` | 仅存于 OS 级密钥库；禁止落盘明文 | 违反即 INV-03（**`v0.1.1`**） |
+| workspace 配置 | `sonecheck.riskThreshold` | `number` | `0.0 < v < 1.0`，默认 `0.4`（S3 实测回填） | 命中即计入清单 |
 | workspace 配置 | `sonecheck.maxItems` | `number` | `1 ≤ v ≤ 20`，默认 `3` | 清单条数上限（Top-K） |
 | workspace 配置 | `sonecheck.enabled` | `boolean` | 默认 `true` | 全局开关 |
 | workspace 配置 | `sonecheck.sensitivePathPatterns` | `string[]` | 默认含 `auth` / `payment` / `migration` 等 | 供 `local_metadata.touches_sensitive_path` 使用 |
@@ -176,19 +220,22 @@
 
 ## 4. 错误码总表
 
-| 错误码 | 含义 | 级别 | 处理建议 |
-|--------|------|------|----------|
-| `ERR-01` | 网络不可达 | WARN | 降级放行 + 一次性提示（INV-04） |
-| `ERR-02` | 请求超时 | WARN | 降级放行 + 一次性提示（INV-04） |
-| `ERR-03` | 非 2xx 响应 | WARN | 降级放行，日志记录状态码 |
-| `ERR-04` | 配额耗尽 / 鉴权失败 | ERROR | 降级放行 + 引导检查 API Key |
-| `ERR-05` | 响应 schema 不合规 | ERROR | 丢弃该块，写入日志，不进入清单 |
-| `ERR-06` | 非 git 仓库 | WARN | 提示一次并终止 |
-| `ERR-07` | 暂存区无改动 | INFO | 提示一次「无暂存改动」 |
-| `ERR-08` | API Key 未配置 | ERROR | 提示一次并给出 `sonecheck.setApiKey` 指引 |
-| `ERR-09` | git 可执行文件缺失 | ERROR | 提示一次并终止 |
-| `ERR-10` | 用户取消输入 | INFO | 忽略，保持原值 |
-| `ERR-11` | 输入为空串（清除 Key） | WARN | 二次确认后清除 |
+| 错误码 | 状态 | 含义 | 级别 | 处理建议 | 生效版本 | 可执行验证 |
+|--------|------|------|------|----------|----------|-----------|
+| `ERR-01` | `[PLANNED]` | 网络不可达 | WARN | 降级放行 + 一次性提示（INV-04） | `v0.1.1` | 契约测试：HTTP 层拦截为连接失败 → 断言不抛错且留痕 `errCode` |
+| `ERR-02` | `[PLANNED]` | 请求超时 | WARN | 降级放行 + 一次性提示（INV-04） | `v0.1.1` | 契约测试：注入超过超时常量的延迟 → 断言按 `ERR-02` 降级 |
+| `ERR-03` | `[PLANNED]` | 非 2xx 响应 | WARN | 降级放行，日志记录状态码 | `v0.1.1` | 契约测试：返回 `500` → 断言日志含 `httpStatus = 500` |
+| `ERR-04` | `[PLANNED]` | 配额耗尽 / 鉴权失败 | ERROR | 降级放行 + 引导检查 API Key | `v0.1.1` | 契约测试：`401` / `429` / `529` → 断言退避次数 ≤ 重试上限且最终降级 |
+| `ERR-05` | `[PLANNED]` | 响应 schema 不合规 | ERROR | 丢弃该块，写入日志，不进入清单 | `v0.1.1` | 单测：缺字段 / 越界 / 枚举外取值各一例 → 断言该块被丢弃、其余块保留 |
+| `ERR-06` | `[CURRENT]` | 非 git 仓库 | WARN | 提示一次并终止 | `v0.1.0` | 单测：`test/git.test.ts` 断言非仓库目录抛出分类失败 `ERR-06` |
+| `ERR-07` | `[CURRENT]` | 暂存区无改动 | INFO | 提示一次「无暂存改动」 | `v0.1.0` | 单测：`test/riskEngine.test.ts` 断言空 diff 抛出分类失败 `ERR-07` |
+| `ERR-08` | `[PLANNED]` | API Key 未配置（`API-02` 前置校验） | ERROR | 提示一次并给出 `sonecheck.setApiKey` 指引 | `v0.1.1` | 单测：密钥可读性为 `false` → 断言终止并给出配置指引 |
+| `ERR-09` | `[CURRENT]` | git 可执行文件缺失 | ERROR | 提示一次并终止 | `v0.1.0` | 单测：`test/git.test.ts` / `src/infra/git.ts` 的 `ENOENT` 分类分支（真机不可复现，以代码分支 + 分类断言为准） |
+| `ERR-10` | `[PLANNED]` | 用户取消输入（`API-03`） | INFO | 忽略，保持原值 | `v0.1.1` | 真机验证（原生输入框不可在纯 Node 复现）：取消后原值不变 |
+| `ERR-11` | `[PLANNED]` | 输入为空串（清除 Key，`API-03`） | WARN | 二次确认后清除 | `v0.1.1` | 单测：二次确认布尔为 `false` → 断言保留原值；真机验证确认路径 |
+
+- **生效版本**：`v0.1.0` 只落地 `ERR-06` / `ERR-07` / `ERR-09`（本地失败路径，不依赖网络与密钥）；`ERR-01`~`ERR-05` 随真实判定服务在 `v0.1.1` 落地，`ERR-08`（归 `API-02`）与 `ERR-10` / `ERR-11`（归 `API-03`）同版落地。本表为**完整错误码集合**，未生效项仍属合规返回值，仅当前实现不会产出。
+- **状态翻牌**：错误码状态与其 `生效版本` 同步——对应版本 S3 实测回填后由 `[PLANNED]` 翻 `[CURRENT]`；未生效项保持 `[PLANNED]`（`dev-meta/docs/06` §4.2）。
 
 ---
 
@@ -196,7 +243,7 @@
 
 - **破坏性变更**（改语义 / 签名 / 坐标口径）：须走 `dm-adr` 记录并同步调用方，**不得静默修改**。
 - **纯增量追加**：标注「纯增量」并回写编号至本表（如 §2.4 新增 `reason_code` 取值）。
-- **状态翻牌**：`[PLANNED]` → `[CURRENT]`（S3 实测数据回填后）；被取代 / 废弃 → 标 `[HISTORY]` 并迁归档，索引保留一行 + 归档指针，**不删除**（`dev-meta/docs/06` §4.2 / §6.5）。
+- **状态翻牌**：`[PLANNED]` → `[CURRENT]` **须以可执行证据为前提，分两批进行**——S3 翻有实测 / 单测 / 守卫依据者（本版为 `INV-02` / `INV-07` / `API-01`（签名与本地派生）/ `CFG-01`），其余兑现项（`INV-01` / `INV-05` / `INV-06` / `API-02` / `ERR-06` / `ERR-07` / `ERR-09`）随 S6 守卫与单测全绿后翻牌；被取代 / 废弃 → 标 `[HISTORY]` 并迁归档，索引保留一行 + 归档指针，**不删除**（`dev-meta/docs/06` §4.2 / §6.5）。
 - **引用单向**：本文**只被引用，不引用下游**（版本文档 / 计划 / 上层规格）；消费方在**自己文档内**声明引用（`dev-meta/docs/06` §7.1）。
 - **只读纪律**：AI 严禁自行改写契约本身；改实现前先 diff 契约（见 `dev-meta/docs/06` §8 与 `dm-contract-gate`）。
 
@@ -206,17 +253,27 @@
 
 | 引用对象 | 方向 | 用途 |
 |----------|------|------|
+| `00_PRODUCT_REQUIREMENTS.md` | upstream | 业务意图与可用性要求 |
 | `01_TECHNICAL_SPEC.md` | upstream | 技术选型与约束 |
 | `02_SYSTEM_DESIGN.md` | upstream | 架构与数据流 |
 | `dev-meta/docs/06-contract-based-dev.md` | 外部权威 | 契约规范：§4 记录 / §4.2 状态 / §6 组织与索引 / §7 引用纪律（只引用） |
-| `04_UI_UX_DESIGN.md` | downstream | 视图状态与交互 |
-| `06_OBSERVABILITY.md` | downstream | 失败面可观测性 |
 
 ---
 
 ## 7. 组织与索引（超过规模阈值时启用）
 
 > 单文件形态足以支撑「契约 **≤ 30 条**或 **≤ 300 行**」。超过任一阈值，或**查一条契约需要全量读整份文档**时，按下述目录形态拆分（`dev-meta/docs/06` §6.1 / §6.2）。
+
+**规模现状与豁免登记（2026-09-22）**
+
+| 判据 | 当前值 | 状态 |
+|------|--------|------|
+| 契约条数 ≤ 30 | 22 条 | ✅ 未超 |
+| 文件行数 ≤ 300 | 359 行（2026-09-22） | ⚠️ **超限** |
+
+- **本轮决定**：**登记豁免、暂不拆分**。理由：拆分须先冻结编号集合，再脚本批量改全仓引用并跑结构 lint（`dev-meta/docs/06` §6.8），属独立议题；与语义修订混做会放大引用断裂风险。
+- **语义锚点同步延后**：契约条目注入锚点属拆分迁移序列中的一步（§7.3），随拆分一并执行；当前仅 §1 保留 `INV-02` 的形态示范。
+- **复评触发条件**（满足任一即启动本节拆分）：① 契约条数 > 30；② 文件行数 > 400；③ 新增一个域；④ 出现「查一条契约需全量读整份文档」的实例。
 
 ### 7.1 目录结构
 
@@ -243,7 +300,7 @@ docs/
 
 | 编号 | 一句话 | 状态 | 正文 |
 |------|--------|------|------|
-| `INV-02` | 出站 payload 不得含完整源文件 | `[PLANNED]` | `docs/contracts/01-core.md#inv-no-full-source-egress` |
+| `INV-02` | 出站 payload 不得含完整源文件 | `[CURRENT]` | `docs/contracts/01-core.md#inv-no-full-source-egress` |
 
 ### 7.3 拆分纪律
 
@@ -284,7 +341,7 @@ docs/
 
 ## 附录 A：通用域族参考（可裁剪）
 
-> 规则权威见 `dev-meta/docs/06` §6.3；本附录只提供**可裁剪的域族清单**（原 06 §6.3 B 节）。
+> 规则权威见 `dev-meta/docs/06-contract-based-dev.md` §6.3；本附录只提供**可裁剪的域族清单**（源自 dev-meta 的 `06` §6.3 B 节）。
 
 | 族 | 典型域前缀 | 管什么 |
 |----|-----------|--------|
@@ -296,12 +353,12 @@ docs/
 
 ## 附录 B：域命名反例清单（勿复现）
 
-> 原 06 §6.3 E 节；判据依据见 `dev-meta/docs/06` §6.3 A/B/C。
+> 源自 dev-meta 的 `06` §6.3 E 节；判据依据见 `dev-meta/docs/06-contract-based-dev.md` §6.3 A/B/C。
 
 | 反例 | 问题 |
 |------|------|
 | `RENDER` 已登记，却又写 `RENDERING-001` | 同一含义两种写法 —— 一词一域被破坏 |
 | `MEM-001` 与 `MEMORY-001` 并存 | 同义双域 |
 | `RENDER_001` / `RENDER-2-001` | 非法形态（下划线 / 双数字段） |
-| 同一域同时管接口与权限 | 语义重叠 —— 应按 06 §6.3 A.2 拆为 `API` / `AUTH` |
-| 用 `L4-001` / `GUARD-11` 当契约 ID | 占用保留命名空间（见 06 §6.3 C） |
+| 同一域同时管接口与权限 | 语义重叠 —— 应按 `dev-meta/docs/06-contract-based-dev.md` §6.3 A.2 拆为 `API` / `AUTH` |
+| 用 `L4-001` / `GUARD-11` 当契约 ID | 占用保留命名空间（见 `dev-meta/docs/06-contract-based-dev.md` §6.3 C） |
