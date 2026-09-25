@@ -50,12 +50,12 @@
 
 - **状态**：`[CURRENT]`
 - **生效版本**：`v0.1.0` 只兑现**签名与本地派生字段**（`infra/jevClient` 为本地 mock，不发网络、不涉及 API Key）；失败面 `ERR-01`~`ERR-05` 与真实 HTTP 链路归 `v0.1.1`
-- **Path**：`POST https://api.typesafe.ai/v1/systemone`
+- **Path**：`POST <endpoint>`——默认 `https://api.typesafe.ai/v1/systemone`，可经 `CFG-01` 的 `sonecheck.endpoint` 覆盖（`ADR-007`）
 - **鉴权**：`Authorization: Bearer <API_KEY>`（Key 存 VS Code SecretStorage，见 §3 `CFG-01`）
 - **Header**：`Content-Type: application/json`
 - **归属 / 调用方**：`infra/jevClient` / 由 `core/riskEngine` 调用
 - **幂等性**：幂等（同一 `state` + `questions` 重复提交返回语义等价判定）
-- **超时**：单请求超时上限 <!-- TODO: [dm-init-docs] 由 v0.1.1 的 S3 实测回填 -->，且必须落在单块判定预算内（`00` §3：≤ 500ms）；超时视为 `ERR-02` 走降级
+- **超时**：单请求超时上限 **400ms**（工程上限定案，`ADR-007`；真机校准待 Jev Key 到位后复核），且必须落在单块判定预算内（`00` §3：≤ 500ms）；超时视为 `ERR-02` 走降级
 - **版本兼容性**：请求侧固定 `model: "jev-latest"`；响应体 `model` 字段返回**实际执行的锁定版本**（如 `jev-1.13.0`），须写入日志以便追溯判定口径变化
 - **上游规范**：TypeSafe 官方 API reference（`https://docs.typesafe.ai/api`）为唯一权威；本节只登记**本项目使用的子集**，不重定义上游语义
 
@@ -127,7 +127,7 @@
 | `ERR-04` | `401` / `429` / `529` | 鉴权失败 / 超配额 / 上游过载 | 同上，提示用户检查 API Key；`429` / `529` 先指数退避重试 | 否（一次性提示） |
 | `ERR-05` | `422` | 请求体校验失败，或响应 schema 不合规（缺字段 / 越界 / `reason_code` 不在枚举内） | 该块丢弃不计入清单 | 否（写入日志） |
 
-- **重试策略**：仅对 `429` / `529` 做指数退避（上限 <!-- TODO: [dm-init-docs] 由 v0.1.1 的 S3 实测回填 -->），其余状态码不重试；含退避在内的总耗时不得超过端到端预算（`00` §3：p95 ≤ 1s）。本项目**手写 `fetch` + 退避函数**，不引入官方 SDK（避免额外依赖，见 `01` §2 依赖限制）。
+- **重试策略**：仅对 `429` / `529` 重试 **1 次**（退避 150ms，工程上限定案，`ADR-007`），其余状态码不重试；含退避在内的单请求链上界 ≈950ms，不得超过端到端预算（`00` §3：p95 ≤ 1s）。本项目**手写 `fetch` + 退避函数**，不引入官方 SDK（避免额外依赖，见 `01` §2 依赖限制）。
 - **严禁静默吞错**：纯函数式失败返回空 / 原值而非 nil；危险失败不得静默，须调用前拦截并显式暴露（`dev-meta/docs/06` §5）。
 
 ---
@@ -152,10 +152,10 @@
 |--------|------|----------|----------|
 | `ERR-06` | 工作区非 git 仓库 | 提示一次，终止 | 否 |
 | `ERR-07` | 暂存区无改动 | 提示一次「无暂存改动」 | 否 |
-| `ERR-08` | API Key 未配置 | 提示一次并给出配置指引 | 否 |
+| `ERR-08` | API Key 未配置 | 宽限跳过：首次一次性引导（`ADR-006`），检查视为零风险放行 | 否 |
 | `ERR-09` | git 可执行文件缺失 | 提示一次，终止 | 否 |
 
-> `ERR-08` 归属 `API-02`（Key 前置校验），生效版本为 `v0.1.1`——本表是 `API-02` 的**完整失败面**，生效版本以 §4 为准。
+> `ERR-08` 归属 `API-02`（Key 前置校验），生效版本为 `v0.1.1`，自 `ADR-006` 起为**宽限跳过语义**（非终止）——本表是 `API-02` 的**完整失败面**，生效版本以 §4 为准。
 
 ---
 
@@ -203,7 +203,7 @@
 
 **`CFG-01` 配置项与密钥存储**（状态 `[CURRENT]`）
 
-- **生效版本**：`v0.1.0` 兑现 4 项 workspace 配置；`sonecheck.jevApiKey`（SecretStorage 行）随 `API-03` 归 `v0.1.1`。
+- **生效版本**：`v0.1.0` 兑现 4 项 workspace 配置；`sonecheck.jevApiKey`（SecretStorage 行）与 `sonecheck.endpoint`（`ADR-007` 纯增量）随 `v0.1.1` 落地。
 - **默认值依据**：`riskThreshold` 默认值由 S2 Harness 实测回填（436 个 hunk：规模噪声地板 `0.20`、语义命中自 `0.40` 起；阈值取噪声地板的 2.0 倍，命中率 1.4%，且敏感路径命中必 `AUDIT`）。
 
 | 实体 | 字段 | 类型 | 约束 | 说明 |
@@ -213,6 +213,7 @@
 | workspace 配置 | `sonecheck.maxItems` | `number` | `1 ≤ v ≤ 20`，默认 `3` | 清单条数上限（Top-K） |
 | workspace 配置 | `sonecheck.enabled` | `boolean` | 默认 `true` | 全局开关 |
 | workspace 配置 | `sonecheck.sensitivePathPatterns` | `string[]` | 默认含 `auth` / `payment` / `migration` 等 | 供 `local_metadata.touches_sensitive_path` 使用 |
+| workspace 配置 | `sonecheck.endpoint` | `string` | 须为 https URL；默认官方判定端点（`ADR-007`） | 判定服务端点；测试 / 自托管网关覆盖 |
 
 - **迁移策略**：配置项只做**纯增量追加**；重命名或语义变更必须走 `dm-adr` 并提供默认值回退，禁止静默变更含义。
 
@@ -229,12 +230,12 @@
 | `ERR-05` | `[PLANNED]` | 响应 schema 不合规 | ERROR | 丢弃该块，写入日志，不进入清单 | `v0.1.1` | 单测：缺字段 / 越界 / 枚举外取值各一例 → 断言该块被丢弃、其余块保留 |
 | `ERR-06` | `[CURRENT]` | 非 git 仓库 | WARN | 提示一次并终止 | `v0.1.0` | 单测：`test/git.test.ts` 断言非仓库目录抛出分类失败 `ERR-06` |
 | `ERR-07` | `[CURRENT]` | 暂存区无改动 | INFO | 提示一次「无暂存改动」 | `v0.1.0` | 单测：`test/riskEngine.test.ts` 断言空 diff 抛出分类失败 `ERR-07` |
-| `ERR-08` | `[PLANNED]` | API Key 未配置（`API-02` 前置校验） | ERROR | 提示一次并给出 `sonecheck.setApiKey` 指引 | `v0.1.1` | 单测：密钥可读性为 `false` → 断言终止并给出配置指引 |
+| `ERR-08` | `[PLANNED]` | API Key 未配置（`API-02` 前置校验；宽限跳过语义，`ADR-006`） | WARN | 首次：一次性引导（带「设置 Key」按钮直达 `sonecheck.setApiKey`）；检查静默跳过（视为放行）；后续仅状态栏短暂提示 | `v0.1.1` | 单测：密钥可读性为 `false` → 断言不进入判定、产生一次性引导且状态非错误 |
 | `ERR-09` | `[CURRENT]` | git 可执行文件缺失 | ERROR | 提示一次并终止 | `v0.1.0` | 单测：`test/git.test.ts` / `src/infra/git.ts` 的 `ENOENT` 分类分支（真机不可复现，以代码分支 + 分类断言为准） |
 | `ERR-10` | `[PLANNED]` | 用户取消输入（`API-03`） | INFO | 忽略，保持原值 | `v0.1.1` | 真机验证（原生输入框不可在纯 Node 复现）：取消后原值不变 |
 | `ERR-11` | `[PLANNED]` | 输入为空串（清除 Key，`API-03`） | WARN | 二次确认后清除 | `v0.1.1` | 单测：二次确认布尔为 `false` → 断言保留原值；真机验证确认路径 |
 
-- **生效版本**：`v0.1.0` 只落地 `ERR-06` / `ERR-07` / `ERR-09`（本地失败路径，不依赖网络与密钥）；`ERR-01`~`ERR-05` 随真实判定服务在 `v0.1.1` 落地，`ERR-08`（归 `API-02`）与 `ERR-10` / `ERR-11`（归 `API-03`）同版落地。本表为**完整错误码集合**，未生效项仍属合规返回值，仅当前实现不会产出。
+- **生效版本**：`v0.1.0` 只落地 `ERR-06` / `ERR-07` / `ERR-09`（本地失败路径，不依赖网络与密钥）；`ERR-01`~`ERR-05` 随真实判定服务在 `v0.1.1` 落地（对契约仿真端点验收，`ADR-007`），`ERR-08`（归 `API-02`，宽限语义 `ADR-006`）与 `ERR-10` / `ERR-11`（归 `API-03`）同版落地。本表为**完整错误码集合**，未生效项仍属合规返回值，仅当前实现不会产出。
 - **状态翻牌**：错误码状态与其 `生效版本` 同步——对应版本 S3 实测回填后由 `[PLANNED]` 翻 `[CURRENT]`；未生效项保持 `[PLANNED]`（`dev-meta/docs/06` §4.2）。
 
 ---
